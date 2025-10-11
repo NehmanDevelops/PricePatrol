@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PricePatrol Toronto - Live Inflation Map</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: #0a0e27;
+        color: white;
+        overflow: hidden;
+      }
+
+      #map {
+        width: 100vw;
+        height: 100vh;
+        filter: brightness(0.9) contrast(1.2);
+      }
+
+      .leaflet-container {
+        background: #0d1117 !important;
+      }
+
+      .leaflet-tile {
+        filter: grayscale(100%) brightness(0.6) invert(1) !important;
+      }
+
+      .controls {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 1000;
+        background: rgba(15, 20, 35, 0.95);
+        padding: 20px;
+        border-radius: 16px;
+        border: 2px solid rgba(0, 217, 255, 0.3);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(10px);
+        min-width: 280px;
+        cursor: move;
+        user-select: none;
+        resize: both;
+        overflow: auto;
+        max-width: 500px;
+        max-height: 80vh;
+        transition: border-color 0.3s;
+      }
+
+      .controls:hover {
+        border-color: rgba(0, 217, 255, 0.6);
+      }
+
+      .controls.dragging {
+        cursor: grabbing;
+        border-color: #00d9ff;
+        box-shadow: 0 12px 40px rgba(0, 217, 255, 0.4);
+      }
+
+      .controls-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        cursor: move;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .drag-indicator {
+        font-size: 18px;
+        color: #666;
+        cursor: grab;
+      }
+
+      .drag-indicator:active {
+        cursor: grabbing;
+      }
+
+      .resize-hint {
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        font-size: 12px;
+        color: #444;
+        pointer-events: none;
+      }
+
+      .logo {
+        font-size: 22px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 6px;
+      }
+
+      .tagline {
+        font-size: 11px;
+        color: #888;
+        margin-bottom: 16px;
+        font-style: italic;
+      }
+
+      select,
+      button {
+        width: 100%;
+        padding: 12px;
+        margin-bottom: 12px;
+        border: 2px solid rgba(0, 217, 255, 0.3);
+        border-radius: 8px;
+        background: rgba(20, 25, 50, 0.8);
+        color: white;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      select:hover,
+      button:hover {
+        border-color: #00d9ff;
+        transform: translateY(-2px);
+      }
+
+      button {
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        border: none;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #000;
+      }
+
+      button:hover {
+        background: linear-gradient(135deg, #00ffaa, #00d9ff);
+      }
+
+      button.active {
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7);
+        }
+        50% {
+          box-shadow: 0 0 0 20px rgba(255, 68, 68, 0);
+        }
+      }
+
+      .stats {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 13px;
+        line-height: 1.8;
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+
+      .stat-value {
+        font-weight: bold;
+        color: #00ff88;
+      }
+
+      .legend {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        background: rgba(15, 20, 35, 0.95);
+        padding: 15px;
+        border-radius: 12px;
+        border: 2px solid rgba(0, 217, 255, 0.3);
+        backdrop-filter: blur(10px);
+      }
+
+      .legend-title {
+        font-weight: bold;
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+        font-size: 13px;
+      }
+
+      .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        margin-right: 10px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+      }
+
+      .shock-banner {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 2000;
+        background: rgba(255, 0, 0, 0.95);
+        padding: 30px 50px;
+        border-radius: 16px;
+        font-size: 28px;
+        font-weight: bold;
+        text-align: center;
+        box-shadow: 0 0 60px rgba(255, 0, 0, 0.8);
+        display: none;
+        animation: shockPulse 0.5s ease-out;
+      }
+
+      @keyframes shockPulse {
+        0% {
+          transform: translate(-50%, -50%) scale(0.8);
+          opacity: 0;
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 1;
+        }
+      }
+
+      .shock-banner.show {
+        display: block;
+      }
+
+      .price-popup {
+        background: rgba(15, 20, 35, 0.98);
+        border: 2px solid #00d9ff;
+        border-radius: 12px;
+        padding: 12px;
+        min-width: 200px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      }
+
+      .popup-store {
+        font-weight: bold;
+        font-size: 16px;
+        color: #00d9ff;
+        margin-bottom: 8px;
+      }
+
+      .popup-item {
+        font-size: 14px;
+        color: #ccc;
+        margin-bottom: 4px;
+      }
+
+      .popup-price {
+        font-size: 22px;
+        font-weight: bold;
+        margin: 8px 0;
+      }
+
+      .popup-price.cheap {
+        color: #00ff88;
+      }
+
+      .popup-price.average {
+        color: #ffaa00;
+      }
+
+      .popup-price.expensive {
+        color: #ff4444;
+      }
+
+      .popup-comparison {
+        font-size: 12px;
+        color: #888;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .live-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #00ff88;
+        border-radius: 50%;
+        margin-right: 6px;
+        animation: blink 1.5s infinite;
+      }
+
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+
+      .custom-marker {
+        border-radius: 50%;
+        border: 3px solid white;
+        width: 30px;
+        height: 30px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        transition: all 0.3s;
+      }
+
+      .custom-marker:hover {
+        transform: scale(1.3);
+        box-shadow: 0 0 25px rgba(255, 255, 255, 0.8);
+      }
+
+      .marker-cheap {
+        background: #00ff88;
+      }
+      .marker-average {
+        background: #ffaa00;
+      }
+      .marker-expensive {
+        background: #ff4444;
+      }
+
+      .location-screen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+        z-index: 3000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.5s, visibility 0.5s;
+      }
+
+      .location-screen.hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .location-container {
+        background: rgba(15, 20, 35, 0.95);
+        border: 2px solid rgba(0, 217, 255, 0.5);
+        border-radius: 24px;
+        padding: 50px;
+        max-width: 500px;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(10px);
+      }
+
+      .location-logo {
+        font-size: 48px;
+        font-weight: 900;
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 15px;
+      }
+
+      .location-tagline {
+        font-size: 18px;
+        color: #888;
+        margin-bottom: 40px;
+      }
+
+      .location-prompt {
+        font-size: 22px;
+        font-weight: 600;
+        color: white;
+        margin-bottom: 25px;
+      }
+
+      .location-input {
+        width: 100%;
+        padding: 18px 20px;
+        font-size: 16px;
+        border: 2px solid rgba(0, 217, 255, 0.3);
+        border-radius: 12px;
+        background: rgba(20, 25, 50, 0.8);
+        color: white;
+        margin-bottom: 20px;
+        transition: all 0.3s;
+      }
+
+      .location-input:focus {
+        outline: none;
+        border-color: #00d9ff;
+        box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+      }
+
+      .location-input::placeholder {
+        color: #666;
+      }
+
+      .location-btn {
+        width: 100%;
+        padding: 18px;
+        font-size: 18px;
+        font-weight: bold;
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        color: #000;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .location-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0, 217, 255, 0.4);
+      }
+
+      .location-btn:active {
+        transform: translateY(0);
+      }
+
+      .location-examples {
+        margin-top: 20px;
+        font-size: 13px;
+        color: #666;
+      }
+
+      .location-examples span {
+        color: #00d9ff;
+        cursor: pointer;
+        margin: 0 8px;
+        transition: color 0.3s;
+      }
+
+      .location-examples span:hover {
+        color: #00ff88;
+      }
+
+      /* Back Button */
+      .back-button {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 1001;
+        background: rgba(15, 20, 35, 0.95);
+        border: 2px solid rgba(0, 217, 255, 0.3);
+        border-radius: 12px;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 14px;
+        font-weight: 600;
+        color: white;
+        opacity: 0;
+        visibility: hidden;
+      }
+
+      .back-button.show {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .back-button:hover {
+        background: rgba(0, 217, 255, 0.2);
+        border-color: #00d9ff;
+        transform: translateX(-5px);
+      }
+
+      .back-arrow {
+        font-size: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="location-screen" id="locationScreen">
+      <div class="location-container">
+        <div class="location-logo">🕵️ PricePatrol</div>
+        <div class="location-tagline">Live Toronto Grocery Prices</div>
+        <div class="location-prompt">Please enter your location</div>
+        <input
+          type="text"
+          id="locationInput"
+          class="location-input"
+          placeholder="e.g., Toronto, ON or M5V 3A8"
+          autocomplete="off"
+        />
+        <button class="location-btn" id="locationBtn">
+          Start Tracking Prices
+        </button>
+        <div class="location-examples">
+          Quick start:
+          <span data-location="Toronto, ON">Toronto</span>
+          <span data-location="North York, ON">North York</span>
+          <span data-location="Scarborough, ON">Scarborough</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="map"></div>
+
+    <button class="back-button" id="backButton">
+      <span class="back-arrow">←</span>
+      <span>Change Location</span>
+    </button>
+
+    <div class="controls" id="controlPanel">
+      <div class="controls-header">
+        <div>
+          <div class="logo">🕵️ PricePatrol</div>
+          <div class="tagline">Live Toronto Grocery Prices</div>
+        </div>
+        <div class="drag-indicator" title="Drag to move">⋮⋮</div>
+      </div>
+
+      <select id="itemSelect">
+        <option value="milk">🥛 Milk (4L)</option>
+        <option value="eggs">🥚 Eggs (Dozen)</option>
+        <option value="bread">🍞 Bread (Loaf)</option>
+        <option value="chicken">🍗 Chicken Breast (1kg)</option>
+        <option value="apples">🍎 Apples (1kg)</option>
+        <option value="cheese">🧀 Cheese (500g)</option>
+        <option value="beef">🥩 Ground Beef (1kg)</option>
+        <option value="rice">🍚 Rice (2kg)</option>
+        <option value="pasta">🍝 Pasta (900g)</option>
+        <option value="tomatoes">🍅 Tomatoes (1kg)</option>
+        <option value="bananas">🍌 Bananas (1kg)</option>
+        <option value="yogurt">🥛 Yogurt (750g)</option>
+      </select>
+
+      <button id="shockBtn">🔥 SHOCK MODE</button>
+
+      <div class="stats">
+        <div class="stat-row">
+          <span><span class="live-indicator"></span>Live Updates</span>
+          <span class="stat-value">Every 3s</span>
+        </div>
+        <div class="stat-row">
+          <span>Stores Tracked</span>
+          <span class="stat-value" id="storeCount">0</span>
+        </div>
+        <div class="stat-row">
+          <span>Avg Price</span>
+          <span class="stat-value" id="avgPrice">$0.00</span>
+        </div>
+        <div class="stat-row">
+          <span>Max Difference</span>
+          <span class="stat-value" id="maxDiff">$0.00</span>
+        </div>
+      </div>
+      <div class="resize-hint">↘ Drag to resize</div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-title">Price Comparison</div>
+      <div class="legend-item">
+        <div class="legend-color marker-cheap"></div>
+        <span>Cheaper (Below avg)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color marker-average"></div>
+        <span>Average</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color marker-expensive"></div>
+        <span>Overpriced (Above avg)</span>
+      </div>
+    </div>
+
+    <div class="shock-banner" id="shockBanner">
+      🔴 SHOCK MODE ACTIVATED<br />
+      <span style="font-size: 18px"
+        >Highlighting price spikes across Toronto</span
+      >
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>
+      (function () {
+        const stores = [
+          { name: "Loblaws", lat: 43.6426, lng: -79.3871, type: "Loblaws" },
+          { name: "No Frills", lat: 43.6532, lng: -79.3832, type: "No Frills" },
+          { name: "Metro", lat: 43.6708, lng: -79.3899, type: "Metro" },
+          { name: "Walmart", lat: 43.6319, lng: -79.504, type: "Walmart" },
+          { name: "FreshCo", lat: 43.7764, lng: -79.2584, type: "FreshCo" },
+          { name: "Loblaws", lat: 43.7615, lng: -79.4111, type: "Loblaws" },
+          { name: "No Frills", lat: 43.6847, lng: -79.4516, type: "No Frills" },
+          { name: "Metro", lat: 43.6596, lng: -79.4636, type: "Metro" },
+          { name: "Sobeys", lat: 43.7279, lng: -79.2629, type: "Sobeys" },
+          {
+            name: "Food Basics",
+            lat: 43.6677,
+            lng: -79.3402,
+            type: "Food Basics",
+          },
+          { name: "Walmart", lat: 43.7731, lng: -79.5082, type: "Walmart" },
+          { name: "Loblaws", lat: 43.648, lng: -79.4094, type: "Loblaws" },
+          { name: "Metro", lat: 43.7903, lng: -79.4163, type: "Metro" },
+          { name: "No Frills", lat: 43.7164, lng: -79.5134, type: "No Frills" },
+          { name: "FreshCo", lat: 43.6234, lng: -79.5982, type: "FreshCo" },
+        ];
+
+        const priceData = {
+          milk: {
+            base: 5.49,
+            range: 1.8,
+            cheap: ["No Frills", "FreshCo", "Food Basics", "Walmart"],
+            expensive: ["Loblaws", "Metro", "Sobeys"],
+          },
+          eggs: {
+            base: 6.99,
+            range: 2.2,
+            cheap: ["Walmart", "No Frills", "FreshCo"],
+            expensive: ["Loblaws", "Sobeys", "Metro"],
+          },
+          bread: {
+            base: 3.99,
+            range: 1.5,
+            cheap: ["Food Basics", "No Frills", "FreshCo"],
+            expensive: ["Loblaws", "Metro"],
+          },
+          chicken: {
+            base: 14.99,
+            range: 4.0,
+            cheap: ["No Frills", "Walmart", "FreshCo"],
+            expensive: ["Sobeys", "Loblaws", "Metro"],
+          },
+          apples: {
+            base: 4.99,
+            range: 2.0,
+            cheap: ["No Frills", "FreshCo", "Walmart"],
+            expensive: ["Loblaws", "Sobeys"],
+          },
+          cheese: {
+            base: 8.99,
+            range: 3.0,
+            cheap: ["Walmart", "No Frills", "Food Basics"],
+            expensive: ["Loblaws", "Sobeys", "Metro"],
+          },
+          beef: {
+            base: 16.99,
+            range: 5.0,
+            cheap: ["No Frills", "Walmart", "FreshCo"],
+            expensive: ["Sobeys", "Loblaws"],
+          },
+          rice: {
+            base: 7.99,
+            range: 2.5,
+            cheap: ["No Frills", "FreshCo", "Walmart"],
+            expensive: ["Loblaws", "Metro"],
+          },
+          pasta: {
+            base: 2.99,
+            range: 1.2,
+            cheap: ["Food Basics", "No Frills", "Walmart"],
+            expensive: ["Metro", "Sobeys"],
+          },
+          tomatoes: {
+            base: 5.49,
+            range: 2.0,
+            cheap: ["No Frills", "FreshCo", "Walmart"],
+            expensive: ["Loblaws", "Sobeys"],
+          },
+          bananas: {
+            base: 1.99,
+            range: 0.8,
+            cheap: ["Walmart", "No Frills", "FreshCo"],
+            expensive: ["Sobeys", "Metro"],
+          },
+          yogurt: {
+            base: 4.99,
+            range: 1.5,
+            cheap: ["No Frills", "Walmart", "Food Basics"],
+            expensive: ["Loblaws", "Metro"],
+          },
+        };
+
+        let torontoMap,
+          markers = [],
+          currentItem = "milk",
+          shockMode = false,
+          updateInterval;
+
+        const locationScreen = document.getElementById("locationScreen");
+        const locationInput = document.getElementById("locationInput");
+        const locationBtn = document.getElementById("locationBtn");
+        const backButton = document.getElementById("backButton");
+        const controlPanel = document.getElementById("controlPanel");
+
+        // Make control panel draggable
+        let isDragging = false;
+        let currentX, currentY, initialX, initialY;
+
+        controlPanel.addEventListener("mousedown", function (e) {
+          // Only drag if clicking on the header or main area, not on buttons/select
+          if (
+            e.target.tagName !== "BUTTON" &&
+            e.target.tagName !== "SELECT" &&
+            e.target.tagName !== "OPTION"
+          ) {
+            isDragging = true;
+            controlPanel.classList.add("dragging");
+
+            initialX = e.clientX - controlPanel.offsetLeft;
+            initialY = e.clientY - controlPanel.offsetTop;
+          }
+        });
+
+        document.addEventListener("mousemove", function (e) {
+          if (isDragging) {
+            e.preventDefault();
+            currentX = e.clientX - initialX;
+            currentY = e.clientY - initialY;
+
+            // Keep panel within viewport
+            const maxX = window.innerWidth - controlPanel.offsetWidth;
+            const maxY = window.innerHeight - controlPanel.offsetHeight;
+
+            currentX = Math.max(0, Math.min(currentX, maxX));
+            currentY = Math.max(0, Math.min(currentY, maxY));
+
+            controlPanel.style.left = currentX + "px";
+            controlPanel.style.top = currentY + "px";
+          }
+        });
+
+        document.addEventListener("mouseup", function () {
+          isDragging = false;
+          controlPanel.classList.remove("dragging");
+        });
+
+        function startApp() {
+          console.log("Starting app...");
+          locationScreen.classList.add("hidden");
+          setTimeout(() => {
+            initializeMap();
+            backButton.classList.add("show");
+          }, 500);
+        }
+
+        function goBack() {
+          console.log("Going back to location screen...");
+          // Hide back button
+          backButton.classList.remove("show");
+          // Clear map
+          if (torontoMap) {
+            torontoMap.remove();
+            torontoMap = null;
+          }
+          // Clear interval
+          if (updateInterval) {
+            clearInterval(updateInterval);
+            updateInterval = null;
+          }
+          // Show location screen
+          locationScreen.classList.remove("hidden");
+          // Clear input for new entry
+          locationInput.value = "";
+          locationInput.focus();
+        }
+
+        backButton.addEventListener("click", goBack);
+
+        locationBtn.addEventListener("click", startApp);
+        locationInput.addEventListener("keypress", (e) => {
+          if (e.key === "Enter") startApp();
+        });
+
+        document.querySelectorAll(".location-examples span").forEach((span) => {
+          span.addEventListener("click", () => {
+            locationInput.value = span.getAttribute("data-location");
+            startApp();
+          });
+        });
+
+        function initializeMap() {
+          torontoMap = L.map("map").setView([43.6532, -79.3832], 11);
+
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "© OpenStreetMap",
+          }).addTo(torontoMap);
+
+          function getPrice(store, item) {
+            const data = priceData[item];
+            let price = data.base;
+            if (data.cheap.includes(store.type)) {
+              price -= Math.random() * (data.range * 0.6);
+            } else if (data.expensive.includes(store.type)) {
+              price += Math.random() * (data.range * 0.4);
+            } else {
+              price += (Math.random() - 0.5) * data.range * 0.3;
+            }
+            return Math.max(price, data.base - data.range);
+          }
+
+          function classifyPrice(price, avg) {
+            if (price < avg * 0.95) return "cheap";
+            if (price > avg * 1.05) return "expensive";
+            return "average";
+          }
+
+          function updateMap() {
+            markers.forEach((m) => torontoMap.removeLayer(m));
+            markers = [];
+
+            const prices = stores.map((store) => ({
+              store,
+              price: getPrice(store, currentItem),
+            }));
+
+            const avgPrice =
+              prices.reduce((sum, p) => sum + p.price, 0) / prices.length;
+            const maxPrice = Math.max(...prices.map((p) => p.price));
+            const minPrice = Math.min(...prices.map((p) => p.price));
+
+            document.getElementById("storeCount").textContent = stores.length;
+            document.getElementById("avgPrice").textContent =
+              "$" + avgPrice.toFixed(2);
+            document.getElementById("maxDiff").textContent =
+              "$" + (maxPrice - minPrice).toFixed(2);
+
+            prices.forEach(({ store, price }) => {
+              const category = classifyPrice(price, avgPrice);
+
+              const icon = L.divIcon({
+                className: "custom-marker",
+                html: `<div class="custom-marker marker-${category}"></div>`,
+                iconSize: [30, 30],
+              });
+
+              const marker = L.marker([store.lat, store.lng], { icon }).addTo(
+                torontoMap
+              );
+
+              const diff = (((price - avgPrice) / avgPrice) * 100).toFixed(1);
+              const diffText = diff > 0 ? `+${diff}%` : `${diff}%`;
+
+              marker.bindPopup(`
+                            <div class="price-popup">
+                                <div class="popup-store">${store.name}</div>
+                                <div class="popup-item">${
+                                  document.getElementById("itemSelect")
+                                    .selectedOptions[0].text
+                                }</div>
+                                <div class="popup-price ${category}">$${price.toFixed(
+                2
+              )}</div>
+                                <div class="popup-comparison">
+                                    ${diffText} vs Toronto avg ($${avgPrice.toFixed(
+                2
+              )})
+                                </div>
+                            </div>
+                        `);
+
+              if (shockMode && category === "expensive") {
+                marker.openPopup();
+              }
+
+              markers.push(marker);
+            });
+          }
+
+          document
+            .getElementById("itemSelect")
+            .addEventListener("change", (e) => {
+              currentItem = e.target.value;
+              updateMap();
+            });
+
+          document.getElementById("shockBtn").addEventListener("click", () => {
+            shockMode = !shockMode;
+            const btn = document.getElementById("shockBtn");
+            const banner = document.getElementById("shockBanner");
+
+            if (shockMode) {
+              btn.classList.add("active");
+              btn.textContent = "🔥 SHOCK MODE ON";
+              banner.classList.add("show");
+              setTimeout(() => banner.classList.remove("show"), 3000);
+            } else {
+              btn.classList.remove("active");
+              btn.textContent = "🔥 SHOCK MODE";
+            }
+
+            updateMap();
+          });
+
+          updateMap();
+          updateInterval = setInterval(updateMap, 3000);
+        }
+      })();
+    </script>
+  </body>
+</html>

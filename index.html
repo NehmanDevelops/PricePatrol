@@ -1,0 +1,3038 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PricePatrol Toronto - Live Inflation Map</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        background: #0a0e27;
+        color: white;
+        overflow: hidden;
+        perspective: 1000px;
+      }
+
+      #map {
+        width: 100vw;
+        height: 100vh;
+        filter: brightness(0.9) contrast(1.2);
+      }
+
+      .leaflet-container {
+        background: #0d1117 !important;
+      }
+
+      .leaflet-tile {
+        filter: hue-rotate(120deg) saturate(150%) brightness(0.9) contrast(1.2)
+          sepia(10%) !important;
+      }
+
+      .controls {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 1000;
+        background: rgba(15, 20, 35, 0.95);
+        padding: 25px;
+        border-radius: 16px;
+        border: 2px solid rgba(0, 217, 255, 0.3);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(10px);
+        min-width: 340px;
+        cursor: move;
+        user-select: none;
+        resize: both;
+        overflow: auto;
+        max-width: 550px;
+        max-height: 80vh;
+        transition: all 0.3s;
+      }
+
+      .controls.compact {
+        min-width: 240px;
+        max-width: 340px;
+        padding: 20px;
+      }
+
+      .controls:hover {
+        border-color: rgba(0, 217, 255, 0.6);
+      }
+
+      .controls.dragging {
+        cursor: grabbing;
+        border-color: #00d9ff;
+        box-shadow: 0 12px 40px rgba(0, 217, 255, 0.4);
+      }
+
+      .controls-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        cursor: move;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .drag-indicator {
+        font-size: 18px;
+        color: #666;
+        cursor: grab;
+      }
+
+      .drag-indicator:active {
+        cursor: grabbing;
+      }
+
+      .resize-hint {
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        font-size: 12px;
+        color: #444;
+        pointer-events: none;
+      }
+
+      .logo {
+        font-size: 26px;
+        font-weight: 800;
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 8px;
+      }
+
+      .tagline {
+        font-size: 13px;
+        color: #888;
+        margin-bottom: 18px;
+        font-style: italic;
+      }
+
+      select,
+      button {
+        width: 100%;
+        padding: 14px;
+        margin-bottom: 14px;
+        border: 2px solid rgba(0, 217, 255, 0.3);
+        border-radius: 8px;
+        background: rgba(20, 25, 50, 0.8);
+        color: white;
+        font-size: 15px;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      select:hover,
+      button:hover {
+        border-color: #00d9ff;
+        transform: translateY(-2px);
+      }
+
+      button {
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        border: none;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #000;
+      }
+
+      button:hover {
+        background: linear-gradient(135deg, #00ffaa, #00d9ff);
+      }
+
+      button.active {
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7);
+        }
+        50% {
+          box-shadow: 0 0 0 20px rgba(255, 68, 68, 0);
+        }
+      }
+
+      .stats {
+        margin-top: 18px;
+        padding-top: 18px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 15px;
+        line-height: 2;
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+
+      .stat-value {
+        font-weight: bold;
+        color: #00ff88;
+        font-size: 16px;
+      }
+
+      .legend {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        background: rgba(15, 20, 35, 0.95);
+        padding: 15px;
+        border-radius: 12px;
+        border: 2px solid rgba(0, 217, 255, 0.3);
+        backdrop-filter: blur(10px);
+      }
+
+      .legend-title {
+        font-weight: bold;
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+        font-size: 13px;
+      }
+
+      .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        margin-right: 10px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+      }
+
+      .shock-banner {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 2000;
+        background: rgba(255, 0, 0, 0.95);
+        padding: 30px 50px;
+        border-radius: 16px;
+        font-size: 28px;
+        font-weight: bold;
+        text-align: center;
+        box-shadow: 0 0 60px rgba(255, 0, 0, 0.8);
+        display: none;
+        animation: shockPulse 0.5s ease-out;
+      }
+
+      @keyframes shockPulse {
+        0% {
+          transform: translate(-50%, -50%) scale(0.8);
+          opacity: 0;
+        }
+        100% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 1;
+        }
+      }
+
+      .shock-banner.show {
+        display: block;
+      }
+
+      .price-popup {
+        background: rgba(15, 20, 35, 0.98);
+        border: 2px solid #00d9ff;
+        border-radius: 12px;
+        padding: 12px;
+        min-width: 200px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      }
+
+      .popup-store {
+        font-weight: bold;
+        font-size: 16px;
+        color: #00d9ff;
+        margin-bottom: 8px;
+      }
+
+      .popup-item {
+        font-size: 14px;
+        color: #ccc;
+        margin-bottom: 4px;
+      }
+
+      .popup-price {
+        font-size: 22px;
+        font-weight: bold;
+        margin: 8px 0;
+      }
+
+      .popup-price.cheap {
+        color: #00ff88;
+      }
+
+      .popup-price.average {
+        color: #ffaa00;
+      }
+
+      .popup-price.expensive {
+        color: #ff4444;
+      }
+
+      .popup-comparison {
+        font-size: 12px;
+        color: #888;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .popup-address {
+        font-size: 12px;
+        color: #ccc;
+        margin-bottom: 8px;
+        font-style: italic;
+      }
+
+      .popup-directions {
+        margin-top: 12px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .directions-btn {
+        width: 100%;
+        padding: 8px 12px;
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        border: none;
+        border-radius: 6px;
+        color: #000;
+        font-weight: bold;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .directions-btn:hover {
+        background: linear-gradient(135deg, #00ffaa, #00d9ff);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 217, 255, 0.4);
+      }
+
+      .directions-btn:active {
+        transform: translateY(0);
+      }
+
+      .live-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #00ff88;
+        border-radius: 50%;
+        margin-right: 6px;
+        animation: blink 1.5s infinite;
+      }
+
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+
+      .marker-wrapper {
+        position: absolute;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+      }
+
+      .custom-marker {
+        border-radius: 50%;
+        border: 3px solid white;
+        width: 40px;
+        height: 40px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.6), 0 4px 8px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 12px;
+        color: white;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        pointer-events: auto;
+      }
+
+      .custom-marker:hover {
+        transform: scale(1.4);
+        box-shadow: 0 0 30px rgba(255, 255, 255, 0.9),
+          0 8px 16px rgba(0, 0, 0, 0.4);
+        z-index: 1000;
+      }
+
+      .marker-cheap {
+        background: linear-gradient(135deg, #00ff88, #00cc6a);
+        border-color: #00ff88;
+      }
+      .marker-average {
+        background: linear-gradient(135deg, #ffaa00, #ff8800);
+        border-color: #ffaa00;
+      }
+      .marker-expensive {
+        background: linear-gradient(135deg, #ff4444, #cc3333);
+        border-color: #ff4444;
+      }
+
+      .marker-ranking {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #000;
+        color: #fff;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: bold;
+        border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      .marker-price {
+        font-size: 10px;
+        font-weight: 900;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        line-height: 1;
+      }
+
+      .marker-best-deal .marker-price {
+        font-size: 12px;
+        font-weight: 900;
+        color: #00ff88;
+        text-shadow: 0 0 10px rgba(0, 255, 136, 0.8),
+          0 1px 2px rgba(0, 0, 0, 0.8);
+      }
+
+      @keyframes priceGlow {
+        0%,
+        100% {
+          text-shadow: 0 0 10px rgba(0, 255, 136, 0.8),
+            0 1px 2px rgba(0, 0, 0, 0.8);
+        }
+        50% {
+          text-shadow: 0 0 15px rgba(0, 255, 136, 1),
+            0 1px 2px rgba(0, 0, 0, 0.8);
+        }
+      }
+
+      .marker-store-icon {
+        position: absolute;
+        bottom: -5px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-size: 8px;
+        font-weight: bold;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        white-space: nowrap;
+      }
+
+      .marker-ranking.rank-1 {
+        background: linear-gradient(135deg, #ffd700, #ffed4e);
+        color: #000;
+        border-color: #ffd700;
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+        transform: scale(1.2);
+        font-size: 12px;
+        font-weight: 900;
+        z-index: 1000;
+      }
+
+      @keyframes goldPulse {
+        0%,
+        100% {
+          box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+          transform: scale(1.2);
+        }
+        50% {
+          box-shadow: 0 0 25px rgba(255, 215, 0, 1);
+          transform: scale(1.3);
+        }
+      }
+
+      .marker-ranking.rank-2 {
+        background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+        color: #000;
+        border-color: #c0c0c0;
+        box-shadow: 0 0 8px rgba(192, 192, 192, 0.6);
+      }
+
+      .marker-ranking.rank-3 {
+        background: linear-gradient(135deg, #cd7f32, #daa520);
+        color: #fff;
+        border-color: #cd7f32;
+        box-shadow: 0 0 8px rgba(205, 127, 50, 0.6);
+      }
+
+      .marker-best-deal {
+        transform: scale(1.1);
+        border: 4px solid #00ff88;
+        box-shadow: 0 0 25px rgba(0, 255, 136, 0.8),
+          0 0 50px rgba(0, 255, 136, 0.4);
+        z-index: 1000;
+      }
+
+      @keyframes bestDealPulse {
+        0%,
+        100% {
+          box-shadow: 0 0 25px rgba(0, 255, 136, 0.8),
+            0 0 50px rgba(0, 255, 136, 0.4);
+          transform: scale(1.1);
+        }
+        50% {
+          box-shadow: 0 0 35px rgba(0, 255, 136, 1),
+            0 0 70px rgba(0, 255, 136, 0.6);
+          transform: scale(1.15);
+        }
+      }
+
+      .location-screen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          135deg,
+          #0a0e27 0%,
+          #1a1f3a 50%,
+          #0a0e27 100%
+        );
+        z-index: 3000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.5s, visibility 0.5s;
+        overflow: hidden;
+      }
+
+      .location-screen::before {
+        content: "";
+        position: absolute;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(
+          circle,
+          rgba(0, 217, 255, 0.1) 0%,
+          transparent 70%
+        );
+        animation: rotate 20s linear infinite;
+      }
+
+      @keyframes rotate {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .location-screen.hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .location-container {
+        background: rgba(15, 20, 35, 0.95);
+        border: 2px solid rgba(0, 217, 255, 0.5);
+        border-radius: 24px;
+        padding: 50px;
+        max-width: 500px;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+          0 0 100px rgba(0, 217, 255, 0.3),
+          inset 0 0 50px rgba(0, 217, 255, 0.05);
+        backdrop-filter: blur(10px);
+        transform-style: preserve-3d;
+        animation: float 6s ease-in-out infinite, glow 3s ease-in-out infinite;
+        position: relative;
+        z-index: 10;
+        overflow: hidden;
+      }
+
+      .location-container::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(
+          circle,
+          rgba(0, 255, 136, 0.1) 0%,
+          transparent 70%
+        );
+        animation: rotate 15s linear infinite;
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0px) rotateX(0deg);
+        }
+        50% {
+          transform: translateY(-20px) rotateX(2deg);
+        }
+      }
+
+      @keyframes glow {
+        0%,
+        100% {
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+            0 0 100px rgba(0, 217, 255, 0.3),
+            inset 0 0 50px rgba(0, 217, 255, 0.05);
+        }
+        50% {
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+            0 0 150px rgba(0, 217, 255, 0.5),
+            inset 0 0 80px rgba(0, 217, 255, 0.1);
+        }
+      }
+
+      .location-logo {
+        font-size: 64px;
+        font-weight: 900;
+        background: linear-gradient(135deg, #00d9ff, #00ff88, #00d9ff);
+        background-size: 200% 200%;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 15px;
+        animation: gradientShift 4s ease infinite,
+          logoFloat 3s ease-in-out infinite;
+        text-shadow: 0 0 40px rgba(0, 217, 255, 0.5);
+        transform: translateZ(50px);
+        filter: drop-shadow(0 10px 20px rgba(0, 217, 255, 0.4));
+      }
+
+      @keyframes gradientShift {
+        0%,
+        100% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+      }
+
+      @keyframes logoFloat {
+        0%,
+        100% {
+          transform: translateZ(50px) translateY(0px);
+        }
+        50% {
+          transform: translateZ(50px) translateY(-10px);
+        }
+      }
+
+      .location-tagline {
+        font-size: 20px;
+        color: #888;
+        margin-bottom: 40px;
+        animation: priceFloat 3s ease-in-out infinite;
+        transform: translateZ(30px);
+        position: relative;
+      }
+
+      .location-tagline::before {
+        content: "��";
+        position: absolute;
+        left: -40px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 24px;
+        animation: priceTagFloat 2s ease-in-out infinite;
+      }
+
+      @keyframes priceFloat {
+        0%,
+        100% {
+          transform: translateZ(30px) translateY(0px);
+        }
+        50% {
+          transform: translateZ(30px) translateY(-5px);
+        }
+      }
+
+      @keyframes priceTagFloat {
+        0%,
+        100% {
+          transform: translateY(-50%) rotate(0deg);
+        }
+        25% {
+          transform: translateY(-50%) rotate(-10deg);
+        }
+        75% {
+          transform: translateY(-50%) rotate(10deg);
+        }
+      }
+
+      @keyframes pulseFade {
+        0%,
+        100% {
+          opacity: 0.8;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      .location-prompt {
+        font-size: 24px;
+        font-weight: 600;
+        color: white;
+        margin-bottom: 25px;
+        transform: translateZ(40px);
+        text-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+      }
+
+      .location-input-container {
+        position: relative;
+        width: 100%;
+        margin-bottom: 20px;
+        transform: translateZ(35px);
+      }
+
+      .location-input {
+        width: 100%;
+        padding: 20px 24px;
+        font-size: 16px;
+        border: 4px solid rgba(0, 217, 255, 0.6);
+        border-radius: 12px;
+        background: rgba(15, 20, 35, 0.95);
+        color: white;
+        transition: all 0.3s;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5),
+          0 0 20px rgba(0, 217, 255, 0.2);
+      }
+
+      .location-input:focus {
+        outline: none;
+        border-color: #00d9ff;
+        border-width: 5px;
+        box-shadow: 0 0 40px rgba(0, 217, 255, 0.8),
+          0 15px 50px rgba(0, 0, 0, 0.6);
+        transform: translateY(-2px);
+        background: rgba(10, 15, 30, 0.98);
+      }
+
+      .location-input::placeholder {
+        color: #666;
+      }
+
+      .autocomplete-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        margin-top: 8px;
+        background: #000000 !important;
+        background-color: #000000 !important;
+        color: #ffffff !important;
+        border: 6px solid #00d9ff !important;
+        border-radius: 12px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 9999 !important;
+        box-shadow: 0 8px 32px #000000 !important;
+        display: none;
+        opacity: 1 !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+      }
+
+      .autocomplete-dropdown.show {
+        display: block;
+      }
+
+      .autocomplete-item {
+        padding: 14px 18px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border-bottom: 2px solid #333333;
+        background: #000000 !important;
+        background-color: #000000 !important;
+        color: #ffffff !important;
+        opacity: 1 !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+      }
+
+      .autocomplete-item:last-child {
+        border-bottom: none;
+      }
+
+      .autocomplete-item:hover {
+        background: #002a42;
+      }
+
+      .autocomplete-main {
+        color: white;
+        font-weight: 600;
+        font-size: 15px;
+        margin-bottom: 4px;
+      }
+
+      .autocomplete-secondary {
+        color: #ffffff !important;
+        font-size: 13px;
+      }
+
+      .location-btn {
+        width: 100%;
+        padding: 20px;
+        font-size: 18px;
+        font-weight: bold;
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        color: #000;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        box-shadow: 0 10px 40px rgba(0, 217, 255, 0.4),
+          0 0 60px rgba(0, 217, 255, 0.2);
+        transform: translateZ(45px);
+        position: relative;
+        overflow: hidden;
+        opacity: 0.5;
+        pointer-events: none;
+      }
+
+      .location-btn.active-btn {
+        opacity: 1;
+        pointer-events: all;
+      }
+
+      .location-btn::before {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
+      }
+
+      .location-btn:hover::before {
+        width: 300px;
+        height: 300px;
+      }
+
+      .location-btn:hover {
+        transform: translateZ(45px) translateY(-5px) scale(1.05);
+        box-shadow: 0 20px 60px rgba(0, 217, 255, 0.6),
+          0 0 100px rgba(0, 217, 255, 0.4);
+      }
+
+      .location-btn:active {
+        transform: translateZ(45px) translateY(-2px) scale(1.02);
+      }
+
+      .location-examples {
+        margin-top: 25px;
+        font-size: 14px;
+        color: #666;
+        transform: translateZ(25px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: nowrap;
+        gap: 15px;
+        text-align: center;
+      }
+
+      .location-examples span {
+        color: #00d9ff;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 20px;
+        background: rgba(0, 217, 255, 0.1);
+        border: 1px solid rgba(0, 217, 255, 0.3);
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .location-examples span:hover {
+        color: #00ff88;
+        background: rgba(0, 217, 255, 0.2);
+        transform: translateY(-3px) scale(1.1);
+        box-shadow: 0 5px 20px rgba(0, 217, 255, 0.4);
+      }
+
+      .back-button {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 1001;
+        background: rgba(15, 20, 35, 0.95);
+        border: 2px solid rgba(0, 217, 255, 0.3);
+        border-radius: 12px;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 14px;
+        font-weight: 600;
+        color: white;
+        opacity: 0;
+        visibility: hidden;
+      }
+
+      .back-button.show {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .back-button:hover {
+        background: rgba(0, 217, 255, 0.2);
+        border-color: #00d9ff;
+        transform: translateX(-5px);
+      }
+
+      .back-arrow {
+        font-size: 20px;
+      }
+
+      /* Location Page Login Button */
+      .location-login-btn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 1001;
+        background: rgba(15, 20, 35, 0.95);
+        border: 2px solid rgba(0, 217, 255, 0.3);
+        border-radius: 12px;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 14px;
+        font-weight: 600;
+        color: white;
+        opacity: 0.9;
+      }
+
+      .location-login-btn:hover {
+        background: rgba(0, 217, 255, 0.2);
+        border-color: #00d9ff;
+        transform: translateY(-2px);
+        opacity: 1;
+        box-shadow: 0 8px 25px rgba(0, 217, 255, 0.3);
+      }
+
+      /* Results Panel */
+      .results-panel {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        background: rgba(15, 20, 35, 0.98);
+        border: 2px solid rgba(0, 217, 255, 0.4);
+        border-radius: 16px;
+        padding: 18px;
+        backdrop-filter: blur(15px);
+        min-width: 300px;
+        max-width: 380px;
+        animation: slideInRight 0.5s ease-out;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6),
+          0 0 60px rgba(0, 217, 255, 0.2);
+      }
+
+      @keyframes slideInRight {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      .results-header {
+        font-size: 17px;
+        font-weight: bold;
+        margin-bottom: 14px;
+        color: #00d9ff;
+        text-align: center;
+        text-shadow: 0 0 8px rgba(0, 217, 255, 0.4);
+      }
+
+      .result-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px;
+        margin-bottom: 12px;
+        background: rgba(20, 25, 50, 0.9);
+        border-radius: 12px;
+        border: 1px solid rgba(0, 217, 255, 0.3);
+        transition: all 0.3s;
+      }
+
+      .result-item:hover {
+        /* Hover effects removed */
+      }
+
+      .result-info {
+        flex: 1;
+      }
+
+      .result-label {
+        font-size: 13px;
+        font-weight: bold;
+        margin-bottom: 4px;
+      }
+
+      .result-label.cheapest {
+        color: #00ff88;
+        text-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+      }
+
+      .result-label.expensive {
+        color: #ff4444;
+        text-shadow: 0 0 8px rgba(255, 68, 68, 0.4);
+      }
+
+      .result-details {
+        font-size: 12px;
+        color: #ccc;
+        margin-bottom: 3px;
+      }
+
+      .result-price {
+        font-size: 18px;
+        font-weight: bold;
+        color: #00d9ff;
+        text-shadow: 0 0 12px rgba(0, 217, 255, 0.5);
+      }
+
+      .result-address {
+        font-size: 11px;
+        color: #aaa;
+        margin-bottom: 4px;
+        font-style: italic;
+      }
+
+      .result-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      .go-to-btn {
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        color: #000;
+        font-weight: bold;
+        font-size: 11px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 3px 10px rgba(0, 217, 255, 0.3);
+      }
+
+      .go-to-btn:hover {
+        background: linear-gradient(135deg, #00ffaa, #00d9ff);
+        transform: scale(1.05);
+        box-shadow: 0 4px 15px rgba(0, 217, 255, 0.4);
+      }
+
+      .go-to-btn:active {
+        transform: scale(0.95);
+      }
+
+      /* Prevent marker movement during map interactions */
+      .leaflet-marker-icon {
+        will-change: auto !important;
+        transform-origin: center center !important;
+      }
+
+      /* Lock markers during map animations and zoom */
+      .leaflet-zoom-anim .leaflet-marker-icon,
+      .leaflet-zoom-animated .leaflet-marker-icon {
+        transform: none !important;
+        left: 0 !important;
+        top: 0 !important;
+        position: absolute !important;
+      }
+
+      /* Prevent marker repositioning during zoom */
+      .leaflet-marker-icon {
+        transform-origin: center center !important;
+        will-change: auto !important;
+      }
+
+      /* Lock all markers during any map movement */
+      .leaflet-container.leaflet-zoom-anim .leaflet-marker-icon,
+      .leaflet-container.leaflet-pan-anim .leaflet-marker-icon {
+        transform: translate(-50%, -50%) !important;
+        left: 0 !important;
+        top: 0 !important;
+      }
+
+      /* Authentication Styles */
+      .auth-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: #0a0e27;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        transition: all 0.5s ease;
+      }
+
+      .auth-screen.hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .auth-container {
+        background: rgba(15, 20, 35, 0.95);
+        border: 2px solid rgba(0, 217, 255, 0.5);
+        border-radius: 24px;
+        padding: 40px;
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
+          0 0 100px rgba(0, 217, 255, 0.3),
+          inset 0 0 50px rgba(0, 217, 255, 0.05);
+        backdrop-filter: blur(10px);
+        transform-style: preserve-3d;
+        animation: float 6s ease-in-out infinite, glow 3s ease-in-out infinite;
+        position: relative;
+        z-index: 10;
+      }
+
+      .auth-logo {
+        font-size: 48px;
+        font-weight: 900;
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 15px;
+      }
+
+      .auth-tagline {
+        color: #888;
+        margin-bottom: 40px;
+        font-size: 16px;
+      }
+
+      .auth-tabs {
+        display: flex;
+        margin-bottom: 30px;
+        border-radius: 12px;
+        background: rgba(20, 25, 50, 0.5);
+        padding: 4px;
+      }
+
+      .auth-tab {
+        flex: 1;
+        padding: 12px;
+        background: transparent;
+        border: none;
+        color: #888;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.3s;
+        font-weight: 600;
+      }
+
+      .auth-tab.active {
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        color: #000;
+      }
+
+      .auth-form {
+        display: none;
+      }
+
+      .auth-form.active {
+        display: block;
+      }
+
+      .auth-input {
+        width: 100%;
+        padding: 15px 20px;
+        font-size: 16px;
+        border: 2px solid rgba(0, 217, 255, 0.3);
+        border-radius: 12px;
+        background: rgba(20, 25, 50, 0.8);
+        color: white;
+        margin-bottom: 15px;
+        transition: all 0.3s;
+        box-sizing: border-box;
+      }
+
+      .auth-input:focus {
+        outline: none;
+        border-color: #00d9ff;
+        box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+      }
+
+      .auth-input::placeholder {
+        color: #666;
+      }
+
+      .auth-btn {
+        width: 100%;
+        padding: 15px;
+        font-size: 16px;
+        font-weight: bold;
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        color: #000;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 15px;
+      }
+
+      .auth-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(0, 217, 255, 0.4);
+      }
+
+      .auth-link {
+        color: #00d9ff;
+        cursor: pointer;
+        text-decoration: underline;
+        font-size: 14px;
+      }
+
+      .auth-link:hover {
+        color: #00ff88;
+      }
+
+      .message {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-weight: 500;
+      }
+
+      .message.success {
+        background: rgba(0, 255, 136, 0.1);
+        border: 1px solid rgba(0, 255, 136, 0.3);
+        color: #00ff88;
+      }
+
+      .message.error {
+        background: rgba(255, 68, 68, 0.1);
+        border: 1px solid rgba(255, 68, 68, 0.3);
+        color: #ff4444;
+      }
+
+      /* User Profile in Controls */
+      .user-profile {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+        padding: 10px;
+        background: rgba(0, 217, 255, 0.1);
+        border-radius: 8px;
+        border: 1px solid rgba(0, 217, 255, 0.3);
+      }
+
+      .user-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: #000;
+        font-size: 14px;
+      }
+
+      .user-info {
+        flex: 1;
+      }
+
+      .user-name {
+        font-weight: bold;
+        color: #00d9ff;
+        font-size: 14px;
+      }
+
+      .user-email {
+        color: #888;
+        font-size: 12px;
+      }
+
+      .logout-btn {
+        background: rgba(255, 68, 68, 0.2);
+        border: 1px solid rgba(255, 68, 68, 0.3);
+        color: #ff4444;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .logout-btn:hover {
+        background: rgba(255, 68, 68, 0.3);
+      }
+
+      /* Saved Preferences */
+      .saved-preferences {
+        margin-top: 15px;
+        padding: 10px;
+        background: rgba(0, 255, 136, 0.1);
+        border-radius: 8px;
+        border: 1px solid rgba(0, 255, 136, 0.3);
+      }
+
+      .preferences-title {
+        font-size: 12px;
+        font-weight: bold;
+        color: #00ff88;
+        margin-bottom: 8px;
+      }
+
+      .preference-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 5px;
+        font-size: 11px;
+        color: #ccc;
+      }
+
+      .preference-value {
+        color: #00ff88;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Authentication Screen -->
+    <div class="auth-screen" id="authScreen">
+      <div class="auth-container">
+        <div class="auth-logo">🕵️ PricePatrol</div>
+        <div class="auth-tagline">Personalized Grocery Price Tracking</div>
+
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="login">Login</button>
+          <button class="auth-tab" data-tab="signup">Sign Up</button>
+        </div>
+
+        <div class="auth-form active" id="loginForm">
+          <input
+            type="text"
+            id="loginEmail"
+            class="auth-input"
+            placeholder="Email"
+          />
+          <input
+            type="password"
+            id="loginPassword"
+            class="auth-input"
+            placeholder="Password"
+          />
+          <button class="auth-btn" id="loginBtn">Login</button>
+          <div class="auth-link" onclick="switchTab('signup')">
+            Don't have an account? Sign up
+          </div>
+        </div>
+
+        <div class="auth-form" id="signupForm">
+          <input
+            type="text"
+            id="signupName"
+            class="auth-input"
+            placeholder="Full Name"
+          />
+          <input
+            type="email"
+            id="signupEmail"
+            class="auth-input"
+            placeholder="Email"
+          />
+          <input
+            type="password"
+            id="signupPassword"
+            class="auth-input"
+            placeholder="Password"
+          />
+          <button class="auth-btn" id="signupBtn">Create Account</button>
+          <div class="auth-link" onclick="switchTab('login')">
+            Already have an account? Login
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="location-screen" id="locationScreen">
+      <!-- Login Button for Location Page -->
+      <button
+        class="location-login-btn"
+        id="locationLoginBtn"
+        onclick="showAuthScreen()"
+      >
+        👤 Login
+      </button>
+
+      <div class="location-container">
+        <div class="location-logo">🕵️ PricePatrol</div>
+        <div class="location-tagline">Live Toronto Grocery Prices</div>
+        <div class="location-prompt">Please enter your location</div>
+        <div class="location-input-container">
+          <input
+            type="text"
+            id="locationInput"
+            class="location-input"
+            placeholder="e.g., Toronto, ON or M5V 3A8"
+            autocomplete="off"
+          />
+          <div class="autocomplete-dropdown" id="autocompleteDropdown"></div>
+        </div>
+        <button class="location-btn" id="locationBtn">
+          Start Tracking Prices
+        </button>
+        <div class="location-examples">
+          Quick start:
+          <span data-location="Pioneer Village Station">Pioneer Village</span>
+          <span data-location="Toronto, ON">Toronto</span>
+          <span data-location="North York, ON">North York</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="map"></div>
+
+    <button class="back-button" id="backButton">
+      <span class="back-arrow">←</span>
+      <span>Change Location</span>
+    </button>
+
+    <div class="controls" id="controlPanel">
+      <div class="controls-header">
+        <div>
+          <div class="logo">🕵️ PricePatrol</div>
+          <div class="tagline">Live Toronto Grocery Prices</div>
+        </div>
+        <div class="drag-indicator" title="Drag to move">⋮⋮</div>
+      </div>
+
+      <!-- User Profile Section -->
+      <div class="user-profile" id="userProfile" style="display: none">
+        <div class="user-avatar" id="userAvatar">U</div>
+        <div class="user-info">
+          <div class="user-name" id="userName">User</div>
+          <div class="user-email" id="userEmail">user@example.com</div>
+        </div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+
+      <!-- Saved Preferences -->
+      <div
+        class="saved-preferences"
+        id="savedPreferences"
+        style="display: none"
+      >
+        <div class="preferences-title">💾 Your Preferences</div>
+        <div class="preference-item">
+          <span>Favorite Item:</span>
+          <span class="preference-value" id="savedItem">Milk</span>
+        </div>
+        <div class="preference-item">
+          <span>Location Count:</span>
+          <span class="preference-value" id="savedLocationCount">10</span>
+        </div>
+        <div class="preference-item">
+          <span>Last Location:</span>
+          <span class="preference-value" id="savedLocation">Toronto, ON</span>
+        </div>
+      </div>
+
+      <select id="itemSelect">
+        <option value="milk">🥛 Milk (4L)</option>
+        <option value="eggs">🥚 Eggs (Dozen)</option>
+        <option value="bread">🍞 Bread (Loaf)</option>
+        <option value="chicken">🍗 Chicken Breast (1kg)</option>
+        <option value="apples">🍎 Apples (1kg)</option>
+        <option value="cheese">🧀 Cheese (500g)</option>
+        <option value="beef">🥩 Ground Beef (1kg)</option>
+        <option value="rice">🍚 Rice (2kg)</option>
+        <option value="pasta">🍝 Pasta (900g)</option>
+        <option value="tomatoes">🍅 Tomatoes (1kg)</option>
+        <option value="bananas">🍌 Bananas (1kg)</option>
+        <option value="yogurt">🥛 Yogurt (750g)</option>
+      </select>
+
+      <div
+        style="
+          margin-top: 10px;
+          padding: 10px;
+          background: rgba(0, 255, 136, 0.1);
+          border-radius: 8px;
+          border: 1px solid rgba(0, 255, 136, 0.3);
+        "
+      >
+        <div
+          style="
+            font-size: 12px;
+            color: #00ff88;
+            margin-bottom: 8px;
+            font-weight: bold;
+          "
+        >
+          🛒 Or select multiple:
+        </div>
+        <div
+          style="
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+            font-size: 11px;
+          "
+        >
+          <label
+            style="
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              cursor: pointer;
+            "
+          >
+            <input type="checkbox" value="milk" class="multi-check" /> 🥛 Milk
+          </label>
+          <label
+            style="
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              cursor: pointer;
+            "
+          >
+            <input type="checkbox" value="eggs" class="multi-check" /> 🥚 Eggs
+          </label>
+          <label
+            style="
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              cursor: pointer;
+            "
+          >
+            <input type="checkbox" value="bread" class="multi-check" /> 🍞 Bread
+          </label>
+          <label
+            style="
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              cursor: pointer;
+            "
+          >
+            <input type="checkbox" value="chicken" class="multi-check" /> 🍗
+            Chicken
+          </label>
+          <label
+            style="
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              cursor: pointer;
+            "
+          >
+            <input type="checkbox" value="apples" class="multi-check" /> 🍎
+            Apples
+          </label>
+          <label
+            style="
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              cursor: pointer;
+            "
+          >
+            <input type="checkbox" value="cheese" class="multi-check" /> 🧀
+            Cheese
+          </label>
+          <label
+            style="
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              cursor: pointer;
+            "
+          >
+            <input type="checkbox" value="beef" class="multi-check" /> 🥩 Beef
+          </label>
+          <label
+            style="
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              cursor: pointer;
+            "
+          >
+            <input type="checkbox" value="rice" class="multi-check" /> 🍚 Rice
+          </label>
+          <label
+            style="
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              cursor: pointer;
+            "
+          >
+            <input type="checkbox" value="pasta" class="multi-check" /> 🍝 Pasta
+          </label>
+          <label
+            style="
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              cursor: pointer;
+            "
+          >
+            <input type="checkbox" value="tomatoes" class="multi-check" /> 🍅
+            Tomatoes
+          </label>
+          <label
+            style="
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              cursor: pointer;
+            "
+          >
+            <input type="checkbox" value="bananas" class="multi-check" /> 🍌
+            Bananas
+          </label>
+          <label
+            style="
+              display: flex;
+              align-items: center;
+              gap: 5px;
+              cursor: pointer;
+            "
+          >
+            <input type="checkbox" value="yogurt" class="multi-check" /> 🥛
+            Yogurt
+          </label>
+        </div>
+      </div>
+
+      <select id="locationCount">
+        <option value="0">📍 Select Number of Stores</option>
+        <option value="5">Show 5 Locations</option>
+        <option value="10">Show 10 Locations</option>
+        <option value="15">Show All 15 Locations</option>
+      </select>
+
+      <button id="findBtn">🔍 FIND LOCATIONS</button>
+
+      <button
+        id="shareBtn"
+        style="
+          display: none;
+          background: linear-gradient(135deg, #00d9ff, #00ff88);
+          margin-top: 10px;
+        "
+      >
+        📤 SHARE YOUR SAVINGS
+      </button>
+
+      <div class="stats">
+        <div class="stat-row">
+          <span><span class="live-indicator"></span>Live Updates</span>
+          <span class="stat-value">Every 3s</span>
+        </div>
+        <div class="stat-row">
+          <span>Stores Tracked</span>
+          <span class="stat-value" id="storeCount">0</span>
+        </div>
+        <div class="stat-row">
+          <span>Avg Price</span>
+          <span class="stat-value" id="avgPrice">$0.00</span>
+        </div>
+        <div class="stat-row">
+          <span>Max Difference</span>
+          <span class="stat-value" id="maxDiff">$0.00</span>
+        </div>
+      </div>
+      <div class="resize-hint">↘ Drag to resize</div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-title">Price Comparison</div>
+      <div class="legend-item">
+        <div class="legend-color marker-cheap"></div>
+        <span>💰 Cheaper (Below avg)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color marker-average"></div>
+        <span>⚖️ Average</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color marker-expensive"></div>
+        <span>💸 Overpriced (Above avg)</span>
+      </div>
+      <div
+        class="legend-item"
+        style="
+          margin-top: 10px;
+          padding-top: 10px;
+          border-top: 1px solid rgba(255, 255, 255, 0.2);
+        "
+      >
+        <div
+          style="
+            width: 20px;
+            height: 20px;
+            background: #000;
+            border-radius: 50%;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            border: 2px solid white;
+          "
+        >
+          1
+        </div>
+        <span>🏆 Top 3 Rankings</span>
+      </div>
+    </div>
+
+    <div class="shock-banner" id="findBanner">
+      🔍 FINDING LOCATIONS<br />
+      <span style="font-size: 18px">Loading stores near you...</span>
+    </div>
+
+    <!-- Results Panel -->
+    <div class="results-panel" id="resultsPanel" style="display: none">
+      <div class="results-header">🏆 Best Deals Found</div>
+      <div id="resultsContent">
+        <!-- Results will be populated here -->
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>
+      // User Management System
+      class UserManager {
+        constructor() {
+          this.currentUser = null;
+          this.users = JSON.parse(
+            localStorage.getItem("pricePatrolUsers") || "{}"
+          );
+        }
+
+        signUp(name, email, password) {
+          if (this.users[email]) {
+            throw new Error("User already exists");
+          }
+
+          const user = {
+            id: Date.now().toString(),
+            name: name,
+            email: email,
+            password: password,
+            createdAt: new Date().toISOString(),
+            preferences: {
+              favoriteItem: "milk",
+              locationCount: 10,
+              lastLocation: "Toronto, ON",
+              savedLocations: [],
+            },
+          };
+
+          this.users[email] = user;
+          localStorage.setItem("pricePatrolUsers", JSON.stringify(this.users));
+          return user;
+        }
+
+        login(email, password) {
+          const user = this.users[email];
+          if (!user || user.password !== password) {
+            throw new Error("Invalid credentials");
+          }
+
+          this.currentUser = user;
+          localStorage.setItem("currentUser", JSON.stringify(user));
+          return user;
+        }
+
+        logout() {
+          this.currentUser = null;
+          localStorage.removeItem("currentUser");
+        }
+
+        getCurrentUser() {
+          if (!this.currentUser) {
+            const stored = localStorage.getItem("currentUser");
+            if (stored) {
+              this.currentUser = JSON.parse(stored);
+            }
+          }
+          return this.currentUser;
+        }
+
+        updatePreferences(preferences) {
+          if (this.currentUser) {
+            this.currentUser.preferences = {
+              ...this.currentUser.preferences,
+              ...preferences,
+            };
+            this.users[this.currentUser.email] = this.currentUser;
+            localStorage.setItem(
+              "pricePatrolUsers",
+              JSON.stringify(this.users)
+            );
+            localStorage.setItem(
+              "currentUser",
+              JSON.stringify(this.currentUser)
+            );
+          }
+        }
+      }
+
+      const userManager = new UserManager();
+
+      // Authentication Functions
+      function switchTab(tab) {
+        document
+          .querySelectorAll(".auth-tab")
+          .forEach((t) => t.classList.remove("active"));
+        document
+          .querySelectorAll(".auth-form")
+          .forEach((f) => f.classList.remove("active"));
+
+        document.querySelector(`[data-tab="${tab}"]`).classList.add("active");
+        document.getElementById(`${tab}Form`).classList.add("active");
+      }
+
+      function showMessage(text, type) {
+        // Remove existing messages
+        const existingMessage = document.querySelector(".message");
+        if (existingMessage) {
+          existingMessage.remove();
+        }
+
+        const message = document.createElement("div");
+        message.className = `message ${type}`;
+        message.textContent = text;
+
+        const container = document.querySelector(".auth-container");
+        container.insertBefore(message, container.firstChild);
+
+        setTimeout(() => message.remove(), 3000);
+      }
+
+      function showUserProfile() {
+        const user = userManager.getCurrentUser();
+        if (user) {
+          document.getElementById("userProfile").style.display = "flex";
+          document.getElementById("savedPreferences").style.display = "block";
+          document.getElementById("userName").textContent = user.name;
+          document.getElementById("userEmail").textContent = user.email;
+          document.getElementById("userAvatar").textContent = user.name
+            .charAt(0)
+            .toUpperCase();
+
+          // Update saved preferences
+          document.getElementById("savedItem").textContent =
+            user.preferences.favoriteItem;
+          document.getElementById("savedLocationCount").textContent =
+            user.preferences.locationCount;
+          document.getElementById("savedLocation").textContent =
+            user.preferences.lastLocation;
+
+          // Apply saved preferences
+          document.getElementById("itemSelect").value =
+            user.preferences.favoriteItem;
+          document.getElementById("locationCount").value =
+            user.preferences.locationCount;
+        }
+      }
+
+      function logout() {
+        userManager.logout();
+        document.getElementById("userProfile").style.display = "none";
+        document.getElementById("savedPreferences").style.display = "none";
+        document.getElementById("authScreen").classList.remove("hidden");
+        document.getElementById("locationScreen").classList.add("hidden");
+        document.getElementById("map").style.display = "none";
+        document.getElementById("controlPanel").style.display = "none";
+        document.getElementById("backButton").style.display = "none";
+        document.getElementById("resultsPanel").style.display = "none";
+      }
+
+      function showAuthScreen() {
+        document.getElementById("authScreen").classList.remove("hidden");
+        document.getElementById("locationScreen").classList.add("hidden");
+      }
+
+      // Event Listeners for Authentication
+      document.getElementById("loginBtn").addEventListener("click", () => {
+        const email = document.getElementById("loginEmail").value;
+        const password = document.getElementById("loginPassword").value;
+
+        if (!email || !password) {
+          showMessage("Please fill in all fields", "error");
+          return;
+        }
+
+        try {
+          const user = userManager.login(email, password);
+          showMessage(`Welcome back, ${user.name}!`, "success");
+          setTimeout(() => {
+            document.getElementById("authScreen").classList.add("hidden");
+            document
+              .getElementById("locationScreen")
+              .classList.remove("hidden");
+            showUserProfile();
+          }, 1500);
+        } catch (error) {
+          showMessage(error.message, "error");
+        }
+      });
+
+      document.getElementById("signupBtn").addEventListener("click", () => {
+        const name = document.getElementById("signupName").value;
+        const email = document.getElementById("signupEmail").value;
+        const password = document.getElementById("signupPassword").value;
+
+        if (!name || !email || !password) {
+          showMessage("Please fill in all fields", "error");
+          return;
+        }
+
+        try {
+          const user = userManager.signUp(name, email, password);
+          showMessage(`Account created for ${user.name}!`, "success");
+          setTimeout(() => {
+            document.getElementById("authScreen").classList.add("hidden");
+            document
+              .getElementById("locationScreen")
+              .classList.remove("hidden");
+            showUserProfile();
+          }, 1500);
+        } catch (error) {
+          showMessage(error.message, "error");
+        }
+      });
+
+      // Tab switching
+      document.querySelectorAll(".auth-tab").forEach((tab) => {
+        tab.addEventListener("click", () => switchTab(tab.dataset.tab));
+      });
+
+      // Check if user is already logged in on page load
+      window.addEventListener("load", () => {
+        const user = userManager.getCurrentUser();
+        if (user) {
+          document.getElementById("authScreen").classList.add("hidden");
+          document.getElementById("locationScreen").classList.remove("hidden");
+          showUserProfile();
+        }
+      });
+
+      (function () {
+        const torontoLocations = [
+          {
+            name: "200 Exbury Rd",
+            detail: "North York, Toronto, ON",
+            lat: 43.7615,
+            lng: -79.4111,
+          },
+          {
+            name: "201 Exbury Rd",
+            detail: "North York, Toronto, ON",
+            lat: 43.7617,
+            lng: -79.4113,
+          },
+          {
+            name: "Pioneer Village Station",
+            detail: "7030 Yonge St, Toronto, ON",
+            lat: 43.7666,
+            lng: -79.5023,
+          },
+          {
+            name: "CN Tower",
+            detail: "290 Bremner Blvd, Toronto, ON",
+            lat: 43.6426,
+            lng: -79.3871,
+          },
+          {
+            name: "Toronto Pearson Airport",
+            detail: "6301 Silver Dart Dr, Mississauga, ON",
+            lat: 43.6777,
+            lng: -79.6248,
+          },
+          {
+            name: "Eaton Centre",
+            detail: "220 Yonge St, Toronto, ON",
+            lat: 43.6544,
+            lng: -79.3807,
+          },
+          {
+            name: "Union Station",
+            detail: "65 Front St W, Toronto, ON",
+            lat: 43.6452,
+            lng: -79.3806,
+          },
+          {
+            name: "Toronto City Hall",
+            detail: "100 Queen St W, Toronto, ON",
+            lat: 43.6534,
+            lng: -79.3839,
+          },
+          {
+            name: "Scarborough Town Centre",
+            detail: "300 Borough Dr, Scarborough, ON",
+            lat: 43.7764,
+            lng: -79.2584,
+          },
+          {
+            name: "Yorkdale Mall",
+            detail: "3401 Dufferin St, Toronto, ON",
+            lat: 43.7253,
+            lng: -79.4521,
+          },
+          {
+            name: "University of Toronto",
+            detail: "27 King's College Cir, Toronto, ON",
+            lat: 43.6629,
+            lng: -79.3957,
+          },
+          {
+            name: "Robarts Library",
+            detail: "University of Toronto, Toronto, ON",
+            lat: 43.6644,
+            lng: -79.3998,
+          },
+          {
+            name: "Ryerson University",
+            detail: "350 Victoria St, Toronto, ON",
+            lat: 43.6577,
+            lng: -79.3788,
+          },
+          {
+            name: "Toronto Zoo",
+            detail: "2000 Meadowvale Rd, Scarborough, ON",
+            lat: 43.8176,
+            lng: -79.1856,
+          },
+          {
+            name: "Rogers Centre",
+            detail: "1 Blue Jays Way, Toronto, ON",
+            lat: 43.6414,
+            lng: -79.3894,
+          },
+          {
+            name: "Scotiabank Arena",
+            detail: "40 Bay St, Toronto, ON",
+            lat: 43.6435,
+            lng: -79.3791,
+          },
+          {
+            name: "High Park",
+            detail: "1873 Bloor St W, Toronto, ON",
+            lat: 43.6465,
+            lng: -79.4637,
+          },
+          {
+            name: "Distillery District",
+            detail: "55 Mill St, Toronto, ON",
+            lat: 43.6503,
+            lng: -79.3599,
+          },
+          {
+            name: "St. Lawrence Market",
+            detail: "93 Front St E, Toronto, ON",
+            lat: 43.6487,
+            lng: -79.3716,
+          },
+          {
+            name: "Kensington Market",
+            detail: "Kensington Ave, Toronto, ON",
+            lat: 43.6544,
+            lng: -79.4006,
+          },
+          {
+            name: "Casa Loma",
+            detail: "1 Austin Terrace, Toronto, ON",
+            lat: 43.6781,
+            lng: -79.4094,
+          },
+          {
+            name: "Nathan Phillips Square",
+            detail: "100 Queen St W, Toronto, ON",
+            lat: 43.6529,
+            lng: -79.3849,
+          },
+          {
+            name: "Harbourfront",
+            detail: "235 Queens Quay W, Toronto, ON",
+            lat: 43.6388,
+            lng: -79.3817,
+          },
+          {
+            name: "Toronto, ON",
+            detail: "Downtown Toronto",
+            lat: 43.6532,
+            lng: -79.3832,
+          },
+          {
+            name: "North York, ON",
+            detail: "North York District",
+            lat: 43.7615,
+            lng: -79.4111,
+          },
+          {
+            name: "Scarborough, ON",
+            detail: "Scarborough District",
+            lat: 43.7764,
+            lng: -79.2584,
+          },
+          {
+            name: "Etobicoke, ON",
+            detail: "Etobicoke District",
+            lat: 43.6205,
+            lng: -79.5132,
+          },
+          {
+            name: "Downtown Toronto",
+            detail: "Financial District",
+            lat: 43.6532,
+            lng: -79.3832,
+          },
+        ];
+
+        const stores = [
+          {
+            name: "Loblaws",
+            lat: 43.7666,
+            lng: -79.5023,
+            type: "Loblaws",
+            address: "7030 Yonge St, Toronto, ON M3J 2P2",
+          },
+          {
+            name: "No Frills",
+            lat: 43.769,
+            lng: -79.5,
+            type: "No Frills",
+            address: "7070 Yonge St, Toronto, ON M3J 2P2",
+          },
+          {
+            name: "Metro",
+            lat: 43.764,
+            lng: -79.504,
+            type: "Metro",
+            address: "7000 Yonge St, Toronto, ON M3J 2P2",
+          },
+          {
+            name: "Walmart",
+            lat: 43.769,
+            lng: -79.505,
+            type: "Walmart",
+            address: "7085 Yonge St, Toronto, ON M3J 2P2",
+          },
+          {
+            name: "FreshCo",
+            lat: 43.764,
+            lng: -79.5,
+            type: "FreshCo",
+            address: "6995 Yonge St, Toronto, ON M3J 2P2",
+          },
+          {
+            name: "Loblaws",
+            lat: 43.768,
+            lng: -79.502,
+            type: "Loblaws",
+            address: "7060 Yonge St, Toronto, ON M3J 2P2",
+          },
+          {
+            name: "No Frills",
+            lat: 43.765,
+            lng: -79.501,
+            type: "No Frills",
+            address: "7010 Yonge St, Toronto, ON M3J 2P2",
+          },
+          {
+            name: "Metro",
+            lat: 43.768,
+            lng: -79.503,
+            type: "Metro",
+            address: "7065 Yonge St, Toronto, ON M3J 2P2",
+          },
+          {
+            name: "Sobeys",
+            lat: 43.765,
+            lng: -79.504,
+            type: "Sobeys",
+            address: "7015 Yonge St, Toronto, ON M3J 2P2",
+          },
+          {
+            name: "Food Basics",
+            lat: 43.767,
+            lng: -79.505,
+            type: "Food Basics",
+            address: "7045 Yonge St, Toronto, ON M3J 2P2",
+          },
+          {
+            name: "Walmart",
+            lat: 43.767,
+            lng: -79.5,
+            type: "Walmart",
+            address: "7040 Yonge St, Toronto, ON M3J 2P2",
+          },
+          {
+            name: "Loblaws",
+            lat: 43.766,
+            lng: -79.503,
+            type: "Loblaws",
+            address: "7025 Yonge St, Toronto, ON M3J 2P2",
+          },
+          {
+            name: "Metro",
+            lat: 43.766,
+            lng: -79.501,
+            type: "Metro",
+            address: "7020 Yonge St, Toronto, ON M3J 2P2",
+          },
+          {
+            name: "No Frills",
+            lat: 43.768,
+            lng: -79.504,
+            type: "No Frills",
+            address: "7055 Yonge St, Toronto, ON M3J 2P2",
+          },
+          {
+            name: "FreshCo",
+            lat: 43.765,
+            lng: -79.502,
+            type: "FreshCo",
+            address: "7005 Yonge St, Toronto, ON M3J 2P2",
+          },
+        ];
+
+        const priceData = {
+          milk: {
+            base: 5.49,
+            range: 1.8,
+            cheap: ["No Frills", "FreshCo", "Food Basics", "Walmart"],
+            expensive: ["Loblaws", "Metro", "Sobeys"],
+          },
+          eggs: {
+            base: 6.99,
+            range: 2.2,
+            cheap: ["Walmart", "No Frills", "FreshCo"],
+            expensive: ["Loblaws", "Sobeys", "Metro"],
+          },
+          bread: {
+            base: 3.99,
+            range: 1.5,
+            cheap: ["Food Basics", "No Frills", "FreshCo"],
+            expensive: ["Loblaws", "Metro"],
+          },
+          chicken: {
+            base: 14.99,
+            range: 4.0,
+            cheap: ["No Frills", "Walmart", "FreshCo"],
+            expensive: ["Sobeys", "Loblaws", "Metro"],
+          },
+          apples: {
+            base: 4.99,
+            range: 2.0,
+            cheap: ["No Frills", "FreshCo", "Walmart"],
+            expensive: ["Loblaws", "Sobeys"],
+          },
+          cheese: {
+            base: 8.99,
+            range: 3.0,
+            cheap: ["Walmart", "No Frills", "Food Basics"],
+            expensive: ["Loblaws", "Sobeys", "Metro"],
+          },
+          beef: {
+            base: 16.99,
+            range: 5.0,
+            cheap: ["No Frills", "Walmart", "FreshCo"],
+            expensive: ["Sobeys", "Loblaws"],
+          },
+          rice: {
+            base: 7.99,
+            range: 2.5,
+            cheap: ["No Frills", "FreshCo", "Walmart"],
+            expensive: ["Loblaws", "Metro"],
+          },
+          pasta: {
+            base: 2.99,
+            range: 1.2,
+            cheap: ["Food Basics", "No Frills", "Walmart"],
+            expensive: ["Metro", "Sobeys"],
+          },
+          tomatoes: {
+            base: 5.49,
+            range: 2.0,
+            cheap: ["No Frills", "FreshCo", "Walmart"],
+            expensive: ["Loblaws", "Sobeys"],
+          },
+          bananas: {
+            base: 1.99,
+            range: 0.8,
+            cheap: ["Walmart", "No Frills", "FreshCo"],
+            expensive: ["Sobeys", "Metro"],
+          },
+          yogurt: {
+            base: 4.99,
+            range: 1.5,
+            cheap: ["No Frills", "Walmart", "Food Basics"],
+            expensive: ["Loblaws", "Metro"],
+          },
+        };
+
+        let torontoMap,
+          markers = [],
+          currentItem = "milk",
+          locationsVisible = false,
+          maxLocations = 0,
+          updateInterval;
+
+        // Make markers globally accessible
+        window.markers = markers;
+
+        // Lock markers during zoom to prevent adjustment
+        if (torontoMap) {
+          torontoMap.on("zoomstart", function () {
+            markers.forEach((marker) => {
+              const markerElement = marker.getElement();
+              if (markerElement) {
+                markerElement.style.position = "absolute";
+                markerElement.style.left = "0";
+                markerElement.style.top = "0";
+                markerElement.style.transform = "translate(-50%, -50%)";
+              }
+            });
+          });
+
+          torontoMap.on("zoomend moveend", function () {
+            markers.forEach((marker) => {
+              const markerElement = marker.getElement();
+              if (markerElement) {
+                markerElement.style.position = "absolute";
+                markerElement.style.left = "0";
+                markerElement.style.top = "0";
+                markerElement.style.transform = "translate(-50%, -50%)";
+                markerElement.style.willChange = "auto";
+              }
+            });
+          });
+        }
+        const locationScreen = document.getElementById("locationScreen");
+        const locationInput = document.getElementById("locationInput");
+        const locationBtn = document.getElementById("locationBtn");
+        const backButton = document.getElementById("backButton");
+        const controlPanel = document.getElementById("controlPanel");
+        const autocompleteDropdown = document.getElementById(
+          "autocompleteDropdown"
+        );
+        let selectedLocation = null;
+
+        locationInput.addEventListener("input", function (e) {
+          const query = e.target.value.toLowerCase().trim();
+          if (query.length < 2) {
+            autocompleteDropdown.classList.remove("show");
+            locationBtn.classList.remove("active-btn");
+            return;
+          }
+
+          const matches = torontoLocations
+            .filter(
+              (loc) =>
+                loc.name.toLowerCase().includes(query) ||
+                loc.detail.toLowerCase().includes(query)
+            )
+            .slice(0, 8);
+
+          if (matches.length > 0) {
+            autocompleteDropdown.innerHTML = matches
+              .map(
+                (loc) => `
+              <div class="autocomplete-item" data-lat="${loc.lat}" data-lng="${loc.lng}" data-name="${loc.name}">
+                <div class="autocomplete-main">${loc.name}</div>
+                <div class="autocomplete-secondary">${loc.detail}</div>
+              </div>
+            `
+              )
+              .join("");
+            autocompleteDropdown.classList.add("show");
+
+            document.querySelectorAll(".autocomplete-item").forEach((item) => {
+              item.addEventListener("click", function () {
+                locationInput.value = this.getAttribute("data-name");
+                selectedLocation = {
+                  lat: parseFloat(this.getAttribute("data-lat")),
+                  lng: parseFloat(this.getAttribute("data-lng")),
+                };
+                autocompleteDropdown.classList.remove("show");
+                locationBtn.classList.add("active-btn");
+              });
+            });
+          } else {
+            autocompleteDropdown.classList.remove("show");
+          }
+        });
+
+        document.addEventListener("click", function (e) {
+          if (
+            !locationInput.contains(e.target) &&
+            !autocompleteDropdown.contains(e.target)
+          ) {
+            autocompleteDropdown.classList.remove("show");
+          }
+        });
+
+        let isDragging = false,
+          currentX,
+          currentY,
+          initialX,
+          initialY;
+
+        controlPanel.addEventListener("mousedown", function (e) {
+          if (
+            e.target.tagName !== "BUTTON" &&
+            e.target.tagName !== "SELECT" &&
+            e.target.tagName !== "OPTION"
+          ) {
+            isDragging = true;
+            controlPanel.classList.add("dragging");
+            initialX = e.clientX - controlPanel.offsetLeft;
+            initialY = e.clientY - controlPanel.offsetTop;
+          }
+        });
+
+        document.addEventListener("mousemove", function (e) {
+          if (isDragging) {
+            e.preventDefault();
+            currentX = e.clientX - initialX;
+            currentY = e.clientY - initialY;
+            const maxX = window.innerWidth - controlPanel.offsetWidth;
+            const maxY = window.innerHeight - controlPanel.offsetHeight;
+            currentX = Math.max(0, Math.min(currentX, maxX));
+            currentY = Math.max(0, Math.min(currentY, maxY));
+            controlPanel.style.left = currentX + "px";
+            controlPanel.style.top = currentY + "px";
+          }
+        });
+
+        document.addEventListener("mouseup", function () {
+          isDragging = false;
+          controlPanel.classList.remove("dragging");
+        });
+
+        function startApp() {
+          locationScreen.classList.add("hidden");
+          setTimeout(() => {
+            initializeMap();
+            backButton.classList.add("show");
+
+            // Save user's location preference
+            const user = userManager.getCurrentUser();
+            if (user && selectedLocation) {
+              userManager.updatePreferences({
+                lastLocation: selectedLocation.name,
+              });
+              document.getElementById("savedLocation").textContent =
+                selectedLocation.name;
+            }
+          }, 500);
+        }
+
+        function goBack() {
+          backButton.classList.remove("show");
+          if (torontoMap) {
+            torontoMap.remove();
+            torontoMap = null;
+          }
+          if (updateInterval) {
+            clearInterval(updateInterval);
+            updateInterval = null;
+          }
+          selectedLocation = null;
+          locationsVisible = false;
+          maxLocations = 0;
+          markers = [];
+          document.getElementById("findBtn").textContent = "🔍 FIND LOCATIONS";
+          document.getElementById("findBtn").classList.remove("active");
+          document.getElementById("locationCount").value = "0";
+          locationScreen.classList.remove("hidden");
+          locationInput.value = "";
+          locationBtn.classList.remove("active-btn");
+
+          // Hide results panel and reset controls
+          const resultsPanel = document.getElementById("resultsPanel");
+          const controlPanel = document.getElementById("controlPanel");
+          if (resultsPanel) {
+            resultsPanel.style.display = "none";
+            resultsPanel.removeAttribute("data-created");
+          }
+          if (controlPanel) controlPanel.classList.remove("compact");
+        }
+
+        backButton.addEventListener("click", goBack);
+        locationBtn.addEventListener("click", startApp);
+        locationInput.addEventListener("keypress", (e) => {
+          if (e.key === "Enter" && selectedLocation) startApp();
+        });
+
+        document.querySelectorAll(".location-examples span").forEach((span) => {
+          span.addEventListener("click", () => {
+            const loc = torontoLocations.find(
+              (l) => l.name === span.getAttribute("data-location")
+            );
+            if (loc) {
+              locationInput.value = loc.name;
+              selectedLocation = { lat: loc.lat, lng: loc.lng };
+              locationBtn.classList.add("active-btn");
+              startApp();
+            }
+          });
+        });
+
+        function initializeMap() {
+          const center = selectedLocation || { lat: 43.7666, lng: -79.5023 }; // Pioneer Village Station
+          torontoMap = L.map("map", {
+            zoomAnimation: false,
+            fadeAnimation: false,
+            markerZoomAnimation: false,
+          }).setView([center.lat, center.lng], selectedLocation ? 14 : 12);
+          L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "© OpenStreetMap",
+          }).addTo(torontoMap);
+
+          if (selectedLocation) {
+            L.marker([selectedLocation.lat, selectedLocation.lng], {
+              icon: L.divIcon({
+                className: "user-location-marker",
+                html: '<div style="font-size: 32px;">📍</div>',
+                iconSize: [32, 32],
+              }),
+            })
+              .addTo(torontoMap)
+              .bindPopup("Your Location")
+              .openPopup();
+          }
+
+          function getPrice(store, item) {
+            const data = priceData[item];
+            let price = data.base;
+            if (data.cheap.includes(store.type))
+              price -= Math.random() * (data.range * 0.6);
+            else if (data.expensive.includes(store.type))
+              price += Math.random() * (data.range * 0.4);
+            else price += (Math.random() - 0.5) * data.range * 0.3;
+            return Math.max(price, data.base - data.range);
+          }
+
+          function classifyPrice(price, avg) {
+            if (price < avg * 0.95) return "cheap";
+            if (price > avg * 1.05) return "expensive";
+            return "average";
+          }
+
+          function getStoreIcon(storeType) {
+            const storeIcons = {
+              Loblaws: "🛒",
+              "No Frills": "💰",
+              Metro: "🏪",
+              Walmart: "🏬",
+              FreshCo: "🥬",
+              Sobeys: "🛍️",
+              "Food Basics": "🍎",
+            };
+            return storeIcons[storeType] || "🏪";
+          }
+
+          function createResultsPanel(prices) {
+            const resultsPanel = document.getElementById("resultsPanel");
+            const resultsContent = document.getElementById("resultsContent");
+
+            if (!resultsPanel || !resultsContent) return;
+
+            // Sort prices to find cheapest and most expensive
+            const sortedPrices = [...prices].sort((a, b) => a.price - b.price);
+            const cheapest = sortedPrices[0];
+            const mostExpensive = sortedPrices[sortedPrices.length - 1];
+
+            // Make controls panel smaller
+            const controlPanel = document.getElementById("controlPanel");
+            controlPanel.classList.add("compact");
+
+            // Show results panel
+            resultsPanel.style.display = "block";
+
+            // Create results content
+            resultsContent.innerHTML = `
+              <div class="result-item">
+                <div class="result-info">
+                  <div class="result-label cheapest">💰 Cheapest Spot Near You</div>
+                  <div class="result-details">${
+                    cheapest.store.name
+                  } ${getStoreIcon(cheapest.store.type)}</div>
+                  <div class="result-address">📍 ${cheapest.store.address}</div>
+                  <div class="result-price">$${cheapest.price.toFixed(2)}</div>
+                  <div style="margin-top: 10px; padding: 10px; background: linear-gradient(135deg, rgba(0, 255, 136, 0.25), rgba(0, 217, 255, 0.15)); border-radius: 8px; border: 2px solid rgba(0, 255, 136, 0.6);">
+                    <div style="font-size: 13px; font-weight: 900; color: #00ff88; text-align: center; text-shadow: 0 0 10px rgba(0, 255, 136, 0.8);">
+                      💰 SAVE $${(mostExpensive.price - cheapest.price).toFixed(
+                        2
+                      )}
+                    </div>
+                    <div style="font-size: 11px; color: #ccc; text-align: center; margin-top: 4px;">
+                      by shopping here instead of ${mostExpensive.store.name}
+                    </div>
+                  </div>
+                </div>
+                <div class="result-actions">
+                  <button class="go-to-btn" onclick="goToMarker(${
+                    cheapest.store.lat
+                  }, ${cheapest.store.lng})">
+                    GO TO
+                  </button>
+                  <button class="directions-btn" onclick="getDirections(${
+                    cheapest.store.lat
+                  }, ${cheapest.store.lng}, '${
+              cheapest.store.address
+            }')" style="margin-top: 5px; font-size: 10px; padding: 6px 12px;">
+                    🗺️ DIRECTIONS
+                  </button>
+                </div>
+              </div>
+              
+              <div class="result-item">
+                <div class="result-info">
+                  <div class="result-label expensive">💸 Most Expensive</div>
+                  <div class="result-details">${
+                    mostExpensive.store.name
+                  } ${getStoreIcon(mostExpensive.store.type)}</div>
+                  <div class="result-address">📍 ${
+                    mostExpensive.store.address
+                  }</div>
+                  <div class="result-price">$${mostExpensive.price.toFixed(
+                    2
+                  )}</div>
+                </div>
+                <div class="result-actions">
+                  <button class="go-to-btn" onclick="goToMarker(${
+                    mostExpensive.store.lat
+                  }, ${mostExpensive.store.lng})">
+                    GO TO
+                  </button>
+                  <button class="directions-btn" onclick="getDirections(${
+                    mostExpensive.store.lat
+                  }, ${mostExpensive.store.lng}, '${
+              mostExpensive.store.address
+            }')" style="margin-top: 5px; font-size: 10px; padding: 6px 12px;">
+                    🗺️ DIRECTIONS
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+
+          function goToMarker(lat, lng) {
+            if (!torontoMap) return;
+            console.log("Navigating to:", lat, lng);
+
+            // Close any open popups
+            markers.forEach((marker) => marker.closePopup());
+
+            // Smoothly pan/zoom to the target location
+            torontoMap.setView([lat, lng], 16, {
+              animate: true,
+              duration: 1.2,
+            });
+
+            // After the map moves, find and highlight the matching marker without
+            // forcing DOM position changes (that caused markers to appear to vanish).
+            setTimeout(() => {
+              let found = false;
+              for (let i = 0; i < markers.length; i++) {
+                const marker = markers[i];
+                const mpos = marker.getLatLng();
+                if (
+                  Math.abs(mpos.lat - lat) < 0.01 &&
+                  Math.abs(mpos.lng - lng) < 0.01
+                ) {
+                  const el = marker.getElement();
+                  if (el) {
+                    // temporary visual highlight
+                    el.style.transition = "transform 0.18s, box-shadow 0.18s";
+                    el.style.transform = "scale(1.45)";
+                    el.style.zIndex = "1000";
+                    el.style.boxShadow = "0 0 20px #00d9ff, 0 0 40px #00d9ff";
+                    setTimeout(() => {
+                      el.style.transform = "";
+                      el.style.zIndex = "";
+                      el.style.boxShadow = "";
+                    }, 2200);
+                  }
+
+                  marker.openPopup();
+                  found = true;
+                  break;
+                }
+              }
+
+              if (!found) {
+                // create a temporary popup marker if none of the existing markers match
+                const tempMarker = L.marker([lat, lng]).addTo(torontoMap);
+                tempMarker
+                  .bindPopup(
+                    `
+                    <div class="price-popup">
+                      <div class="popup-store">📍 Location</div>
+                      <div class="popup-address">📍 ${lat.toFixed(
+                        4
+                      )}, ${lng.toFixed(4)}</div>
+                      <div class="popup-directions">
+                        <button class="directions-btn" onclick="getDirections(${lat}, ${lng}, '${lat}, ${lng}')">🗺️ Get Directions</button>
+                      </div>
+                    </div>
+                  `
+                  )
+                  .openPopup();
+
+                setTimeout(() => torontoMap.removeLayer(tempMarker), 5000);
+              }
+            }, 900);
+          }
+
+          function getDirections(lat, lng, address) {
+            // Open Google Maps with directions
+            const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+            window.open(googleMapsUrl, "_blank");
+          }
+
+          // Make functions globally accessible
+          window.goToMarker = goToMarker;
+          window.getDirections = getDirections;
+
+          function updateMap() {
+            if (!locationsVisible) return;
+            markers.forEach((m) => torontoMap.removeLayer(m));
+            markers = [];
+
+            const storesToShow = stores.slice(0, maxLocations);
+
+            // Get selected items: checkboxes if any checked, otherwise dropdown
+            const checked = Array.from(
+              document.querySelectorAll(".multi-check:checked")
+            ).map((cb) => cb.value);
+            const selectedItems = checked.length > 0 ? checked : [currentItem];
+
+            // Calculate total price for each store
+            const prices = storesToShow.map((store) => ({
+              store,
+              price: selectedItems.reduce(
+                (sum, item) => sum + getPrice(store, item),
+                0
+              ),
+            }));
+            const avgPrice =
+              prices.reduce((sum, p) => sum + p.price, 0) / prices.length;
+            const maxPrice = Math.max(...prices.map((p) => p.price));
+            const minPrice = Math.min(...prices.map((p) => p.price));
+
+            document.getElementById("storeCount").textContent =
+              storesToShow.length;
+            document.getElementById("avgPrice").textContent =
+              "$" + avgPrice.toFixed(2);
+            document.getElementById("maxDiff").textContent =
+              "$" + (maxPrice - minPrice).toFixed(2);
+
+            // Sort prices to get ranking
+            const sortedPrices = [...prices].sort((a, b) => a.price - b.price);
+
+            prices.forEach(({ store, price }, index) => {
+              const category = classifyPrice(price, avgPrice);
+              const ranking =
+                sortedPrices.findIndex((p) => p.store === store) + 1;
+              const diff = (((price - avgPrice) / avgPrice) * 100).toFixed(1);
+              const diffText = diff > 0 ? `+${diff}%` : `${diff}%`;
+
+              // Get store icon/emoji
+              const storeIcon = getStoreIcon(store.type);
+
+              // Create ranking badge with special styling
+              const rankingBadge =
+                ranking <= 3
+                  ? `<div class="marker-ranking rank-${ranking}">${ranking}</div>`
+                  : "";
+
+              // Create price label
+              const priceLabel = `$${price.toFixed(2)}`;
+
+              // Add best deal class for cheapest option
+              const isBestDeal = ranking === 1;
+              const bestDealClass = isBestDeal ? " marker-best-deal" : "";
+
+              const icon = L.divIcon({
+                className: "custom-marker",
+                html: `
+                  <div class="marker-wrapper">
+                    <div class="custom-marker marker-${category}${bestDealClass}">
+                      <div class="marker-price">${priceLabel}</div>
+                      ${rankingBadge}
+                      <div class="marker-store-icon">${storeIcon}</div>
+                    </div>
+                  </div>
+                `,
+                iconSize: [50, 50],
+                iconAnchor: [25, 25],
+                popupAnchor: [0, -25],
+                // Prevent marker movement during zoom
+                interactive: true,
+                bubblingMouseEvents: false,
+              });
+
+              const marker = L.marker([store.lat, store.lng], {
+                icon,
+                draggable: false,
+                keyboard: false,
+              }).addTo(torontoMap);
+
+              marker.bindPopup(`
+                <div class="price-popup">
+                  <div class="popup-store">${store.name} ${storeIcon}</div>
+                  <div class="popup-address">📍 ${store.address}</div>
+                  <div class="popup-item">${
+                    document.getElementById("itemSelect").selectedOptions[0]
+                      .text
+                  }</div>
+                  <div class="popup-price ${category}">$${price.toFixed(
+                2
+              )}</div>
+                  <div class="popup-comparison">
+                    <strong>Ranking:</strong> #${ranking} of ${
+                prices.length
+              }<br>
+                    <strong>vs Average:</strong> ${diffText} ($${avgPrice.toFixed(
+                2
+              )})<br>
+                    <strong>Category:</strong> ${category.toUpperCase()}
+                    ${
+                      isBestDeal
+                        ? '<br><span style="color: #00ff88; font-weight: bold;">🏆 BEST DEAL!</span>'
+                        : ""
+                    }
+                  </div>
+                  <div class="popup-directions">
+                    <button class="directions-btn" onclick="getDirections(${
+                      store.lat
+                    }, ${store.lng}, '${store.address}')">
+                      🗺️ Get Directions
+                    </button>
+                  </div>
+                </div>
+              `);
+              markers.push(marker);
+            });
+
+            // Update global markers reference
+            window.markers = markers;
+
+            // Create results panel only once
+            if (
+              !document
+                .getElementById("resultsPanel")
+                .hasAttribute("data-created")
+            ) {
+              createResultsPanel(prices);
+              document
+                .getElementById("resultsPanel")
+                .setAttribute("data-created", "true");
+            }
+          }
+
+          document
+            .getElementById("itemSelect")
+            .addEventListener("change", (e) => {
+              currentItem = e.target.value;
+              if (locationsVisible) updateMap();
+
+              // Save user preference
+              const user = userManager.getCurrentUser();
+              if (user) {
+                userManager.updatePreferences({ favoriteItem: e.target.value });
+                document.getElementById("savedItem").textContent =
+                  e.target.value;
+              }
+            });
+
+          // Update map when checkboxes change
+          document.querySelectorAll(".multi-check").forEach((checkbox) => {
+            checkbox.addEventListener("change", () => {
+              if (locationsVisible) updateMap();
+            });
+          });
+
+          document
+            .getElementById("locationCount")
+            .addEventListener("change", (e) => {
+              maxLocations = parseInt(e.target.value);
+
+              // Save user preference
+              const user = userManager.getCurrentUser();
+              if (user) {
+                userManager.updatePreferences({
+                  locationCount: parseInt(e.target.value),
+                });
+                document.getElementById("savedLocationCount").textContent =
+                  e.target.value;
+              }
+            });
+
+          document.getElementById("findBtn").addEventListener("click", () => {
+            if (maxLocations === 0) {
+              alert("Please select the number of locations to show first!");
+              return;
+            }
+
+            locationsVisible = true;
+            const btn = document.getElementById("findBtn");
+            const shareBtn = document.getElementById("shareBtn");
+            const banner = document.getElementById("findBanner");
+            btn.classList.add("active");
+            btn.textContent = "✅ LOCATIONS LOADED";
+            banner.classList.add("show");
+            shareBtn.style.display = "block";
+            setTimeout(() => banner.classList.remove("show"), 2000);
+            updateMap();
+
+            setTimeout(() => {
+              if (markers.length > 0) {
+                const group = L.featureGroup(markers);
+                torontoMap.fitBounds(group.getBounds().pad(0.1), {
+                  animate: true,
+                  duration: 1.5,
+                  maxZoom: 13,
+                });
+              }
+            }, 100);
+
+            // Stop automatic price updates - keep prices static
+            if (updateInterval) clearInterval(updateInterval);
+            // updateInterval = setInterval(updateMap, 3000); // Disabled automatic updates
+          });
+
+          // Share button functionality
+          document.getElementById("shareBtn").addEventListener("click", () => {
+            const avgPrice = document.getElementById("avgPrice").textContent;
+            const maxDiff = document.getElementById("maxDiff").textContent;
+            const storeCount =
+              document.getElementById("storeCount").textContent;
+
+            const shareText = `🕵️ I'm using PricePatrol to save money on groceries! 💰\n\nI compared ${storeCount} stores and found up to ${maxDiff} in savings!\n\nAverage price: ${avgPrice}\n\nTry it yourself at Pioneer Village Station! 🛒`;
+
+            if (navigator.share) {
+              navigator
+                .share({
+                  title: "PricePatrol - Save on Groceries",
+                  text: shareText,
+                })
+                .catch(() => {});
+            } else {
+              // Fallback: copy to clipboard
+              navigator.clipboard
+                .writeText(shareText)
+                .then(() => {
+                  alert(
+                    "✅ Savings info copied to clipboard! Share it with your friends!"
+                  );
+                })
+                .catch(() => {
+                  alert(shareText);
+                });
+            }
+          });
+
+          document.getElementById("storeCount").textContent = "0";
+          document.getElementById("avgPrice").textContent = "$0.00";
+          document.getElementById("maxDiff").textContent = "$0.00";
+        }
+      })();
+    </script>
+  </body>
+</html>
