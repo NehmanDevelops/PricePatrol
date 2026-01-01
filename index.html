@@ -975,6 +975,460 @@
         box-shadow: 0 8px 25px rgba(0, 217, 255, 0.3);
       }
 
+      /* Live Demo Button */
+      .live-demo-btn {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        z-index: 1001;
+        background: linear-gradient(135deg, #ff6b35, #f7931e);
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-radius: 16px;
+        padding: 14px 24px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        transition: all 0.3s;
+        font-size: 15px;
+        font-weight: 700;
+        color: white;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        animation: demoPulse 2s ease-in-out infinite;
+        box-shadow: 0 8px 30px rgba(255, 107, 53, 0.4);
+      }
+
+      .live-demo-btn:hover {
+        background: linear-gradient(135deg, #ff8555, #ffa53e);
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 0 12px 40px rgba(255, 107, 53, 0.6);
+      }
+
+      .live-demo-btn .demo-icon {
+        font-size: 20px;
+        animation: demoIconBounce 1s ease-in-out infinite;
+      }
+
+      @keyframes demoPulse {
+        0%, 100% { box-shadow: 0 8px 30px rgba(255, 107, 53, 0.4); }
+        50% { box-shadow: 0 8px 40px rgba(255, 107, 53, 0.7), 0 0 20px rgba(255, 107, 53, 0.3); }
+      }
+
+      @keyframes demoIconBounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-3px); }
+      }
+
+      /* Tour Overlay System */
+      .tour-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: transparent;
+        z-index: 9999;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.5s ease;
+        pointer-events: none;
+      }
+
+      .tour-overlay.active {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .tour-spotlight {
+        position: absolute;
+        border-radius: 16px;
+        border: 4px solid #00d9ff;
+        box-shadow: 0 0 30px 8px rgba(0, 217, 255, 0.7),
+                    0 0 60px 15px rgba(0, 217, 255, 0.4),
+                    inset 0 0 20px rgba(0, 217, 255, 0.15);
+        transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+        z-index: 10000;
+        animation: spotlightPulse 2s ease-in-out infinite;
+      }
+
+      @keyframes spotlightPulse {
+        0%, 100% { box-shadow: 0 0 30px 8px rgba(0, 217, 255, 0.7), 0 0 60px 15px rgba(0, 217, 255, 0.4), inset 0 0 20px rgba(0, 217, 255, 0.15); }
+        50% { box-shadow: 0 0 40px 12px rgba(0, 217, 255, 0.9), 0 0 80px 20px rgba(0, 217, 255, 0.5), inset 0 0 30px rgba(0, 217, 255, 0.2); }
+      }
+
+      .tour-tooltip {
+        position: absolute;
+        background: linear-gradient(135deg, rgba(15, 20, 35, 0.98), rgba(25, 35, 60, 0.98));
+        border: 3px solid #00d9ff;
+        border-radius: 20px;
+        padding: 25px 30px;
+        max-width: 420px;
+        min-width: 320px;
+        z-index: 10001;
+        animation: tooltipFadeIn 0.5s ease-out;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6),
+                    0 0 80px rgba(0, 217, 255, 0.3);
+      }
+
+      @keyframes tooltipFadeIn {
+        from { opacity: 0; transform: translateY(20px) scale(0.95); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
+      .tour-tooltip::before {
+        content: '';
+        position: absolute;
+        width: 0;
+        height: 0;
+        border: 12px solid transparent;
+      }
+
+      .tour-tooltip.arrow-left::before {
+        left: -24px;
+        top: 30px;
+        border-right-color: #00d9ff;
+      }
+
+      .tour-tooltip.arrow-right::before {
+        right: -24px;
+        top: 30px;
+        border-left-color: #00d9ff;
+      }
+
+      .tour-tooltip.arrow-top::before {
+        top: -24px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-bottom-color: #00d9ff;
+      }
+
+      .tour-tooltip.arrow-bottom::before {
+        bottom: -24px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-top-color: #00d9ff;
+      }
+
+      .tour-step-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 15px;
+      }
+
+      .tour-step-number {
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        color: #000;
+        font-weight: 900;
+        font-size: 14px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .tour-step-label {
+        color: #00d9ff;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .tour-title {
+        font-size: 22px;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 12px;
+        background: linear-gradient(135deg, #fff, #00d9ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .tour-description {
+        color: #ccc;
+        font-size: 15px;
+        line-height: 1.7;
+        margin-bottom: 20px;
+      }
+
+      .tour-description strong {
+        color: #00ff88;
+      }
+
+      .tour-description .highlight {
+        color: #00d9ff;
+        font-weight: 600;
+      }
+
+      .tour-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .tour-btn {
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: none;
+      }
+
+      .tour-btn-next {
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        color: #000;
+        flex: 1;
+      }
+
+      .tour-btn-next:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 217, 255, 0.4);
+      }
+
+      .tour-btn-skip {
+        background: rgba(255, 255, 255, 0.1);
+        color: #888;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .tour-btn-skip:hover {
+        background: rgba(255, 68, 68, 0.2);
+        color: #ff6666;
+        border-color: rgba(255, 68, 68, 0.4);
+      }
+
+      .tour-btn-prev {
+        background: rgba(255, 255, 255, 0.1);
+        color: #ccc;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .tour-btn-prev:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+      }
+
+      .tour-progress {
+        display: flex;
+        gap: 6px;
+        justify-content: center;
+        margin-top: 15px;
+      }
+
+      .tour-progress-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        transition: all 0.3s;
+      }
+
+      .tour-progress-dot.active {
+        background: #00d9ff;
+        transform: scale(1.3);
+      }
+
+      .tour-progress-dot.completed {
+        background: #00ff88;
+      }
+
+      /* Tour Welcome Screen */
+      .tour-welcome {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0a0e27 100%);
+        z-index: 10002;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.5s ease;
+      }
+
+      .tour-welcome.active {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .tour-welcome-content {
+        text-align: center;
+        max-width: 600px;
+        padding: 50px;
+        background: rgba(15, 20, 35, 0.95);
+        border: 3px solid rgba(0, 217, 255, 0.5);
+        border-radius: 30px;
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5),
+                    0 0 120px rgba(0, 217, 255, 0.2);
+        animation: welcomeFadeIn 0.8s ease-out;
+      }
+
+      @keyframes welcomeFadeIn {
+        from { opacity: 0; transform: scale(0.9) translateY(30px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+      }
+
+      .tour-welcome-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #ff6b35, #f7931e);
+        color: white;
+        padding: 8px 20px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin-bottom: 25px;
+        animation: badgePulse 2s ease-in-out infinite;
+      }
+
+      @keyframes badgePulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+      }
+
+      .tour-welcome-logo {
+        font-size: 72px;
+        margin-bottom: 20px;
+        animation: logoFloat 3s ease-in-out infinite;
+      }
+
+      @keyframes logoFloat {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+      }
+
+      .tour-welcome-title {
+        font-size: 42px;
+        font-weight: 900;
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 15px;
+      }
+
+      .tour-welcome-subtitle {
+        font-size: 18px;
+        color: #888;
+        margin-bottom: 35px;
+        line-height: 1.6;
+      }
+
+      .tour-welcome-features {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        margin-bottom: 35px;
+      }
+
+      .tour-welcome-feature {
+        text-align: center;
+      }
+
+      .tour-welcome-feature-icon {
+        font-size: 32px;
+        margin-bottom: 8px;
+      }
+
+      .tour-welcome-feature-text {
+        font-size: 13px;
+        color: #aaa;
+        font-weight: 600;
+      }
+
+      .tour-start-btn {
+        background: linear-gradient(135deg, #00d9ff, #00ff88);
+        color: #000;
+        border: none;
+        padding: 18px 50px;
+        font-size: 18px;
+        font-weight: 800;
+        border-radius: 15px;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin-bottom: 15px;
+      }
+
+      .tour-start-btn:hover {
+        transform: translateY(-3px) scale(1.05);
+        box-shadow: 0 15px 40px rgba(0, 217, 255, 0.5);
+      }
+
+      .tour-skip-intro {
+        color: #666;
+        font-size: 13px;
+        cursor: pointer;
+        transition: color 0.3s;
+      }
+
+      .tour-skip-intro:hover {
+        color: #ff6666;
+      }
+
+      /* Simulated elements for tour */
+      .tour-simulated-marker {
+        position: absolute;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #00ff88, #00cc6a);
+        border: 3px solid white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 12px;
+        color: white;
+        box-shadow: 0 0 20px rgba(0, 255, 136, 0.8);
+        animation: markerPulse 1.5s ease-in-out infinite;
+        z-index: 10000;
+      }
+
+      @keyframes markerPulse {
+        0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 255, 136, 0.8); }
+        50% { transform: scale(1.1); box-shadow: 0 0 35px rgba(0, 255, 136, 1); }
+      }
+
+      .tour-zoom-indicator {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100px;
+        height: 100px;
+        border: 4px dashed rgba(0, 217, 255, 0.6);
+        border-radius: 50%;
+        animation: zoomPulse 1s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 9998;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      .tour-zoom-indicator.active {
+        opacity: 1;
+      }
+
+      @keyframes zoomPulse {
+        0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+      }
+
       /* Results Panel */
       .results-panel {
         position: absolute;
@@ -1380,6 +1834,12 @@
   <body>
     <!-- Authentication Screen -->
     <div class="auth-screen" id="authScreen">
+      <!-- Live Demo Button for Recruiters on Auth Screen -->
+      <button class="live-demo-btn" id="liveDemoBtnAuth" onclick="skipAuthAndStartTour()" style="z-index: 10001;">
+        <span class="demo-icon">🎬</span>
+        <span>Live Demo for Recruiters</span>
+      </button>
+
       <div class="auth-container">
         <div class="auth-logo">🕵️ PricePatrol</div>
         <div class="auth-tagline">Personalized Grocery Price Tracking</div>
@@ -1443,6 +1903,12 @@
         onclick="showAuthScreen()"
       >
         👤 Login
+      </button>
+
+      <!-- Live Demo Button for Recruiters -->
+      <button class="live-demo-btn" id="liveDemoBtn" onclick="startTour()">
+        <span class="demo-icon">🎬</span>
+        <span>Live Demo for Recruiters</span>
       </button>
 
       <div class="location-container">
@@ -1786,6 +2252,62 @@
         <!-- Results will be populated here -->
       </div>
     </div>
+
+    <!-- Tour Welcome Screen -->
+    <div class="tour-welcome" id="tourWelcome">
+      <div class="tour-welcome-content">
+        <div class="tour-welcome-badge">🎯 Interactive Demo</div>
+        <div class="tour-welcome-logo">🕵️</div>
+        <div class="tour-welcome-title">Welcome to PricePatrol</div>
+        <div class="tour-welcome-subtitle">
+          Get a guided walkthrough of Toronto's smartest grocery price comparison app. 
+          See how users save money by finding the best deals in real-time.
+        </div>
+        <div class="tour-welcome-features">
+          <div class="tour-welcome-feature">
+            <div class="tour-welcome-feature-icon">🗺️</div>
+            <div class="tour-welcome-feature-text">Live Map</div>
+          </div>
+          <div class="tour-welcome-feature">
+            <div class="tour-welcome-feature-icon">💰</div>
+            <div class="tour-welcome-feature-text">Price Compare</div>
+          </div>
+          <div class="tour-welcome-feature">
+            <div class="tour-welcome-feature-icon">📍</div>
+            <div class="tour-welcome-feature-text">Store Locator</div>
+          </div>
+        </div>
+        <button class="tour-start-btn" onclick="beginTourSteps()">
+          🚀 Start Interactive Demo
+        </button>
+        <div class="tour-skip-intro" onclick="endTour()">Skip and explore on my own</div>
+      </div>
+    </div>
+
+    <!-- Tour Overlay -->
+    <div class="tour-overlay" id="tourOverlay"></div>
+
+    <!-- Tour Spotlight -->
+    <div class="tour-spotlight" id="tourSpotlight"></div>
+
+    <!-- Tour Tooltip -->
+    <div class="tour-tooltip" id="tourTooltip" style="display: none;">
+      <div class="tour-step-indicator">
+        <div class="tour-step-number" id="tourStepNumber">1</div>
+        <div class="tour-step-label" id="tourStepLabel">Feature</div>
+      </div>
+      <div class="tour-title" id="tourTitle">Title</div>
+      <div class="tour-description" id="tourDescription">Description</div>
+      <div class="tour-actions">
+        <button class="tour-btn tour-btn-skip" onclick="endTour()">End Tour</button>
+        <button class="tour-btn tour-btn-prev" id="tourPrevBtn" onclick="prevTourStep()">← Back</button>
+        <button class="tour-btn tour-btn-next" id="tourNextBtn" onclick="nextTourStep()">Next →</button>
+      </div>
+      <div class="tour-progress" id="tourProgress"></div>
+    </div>
+
+    <!-- Zoom Indicator -->
+    <div class="tour-zoom-indicator" id="tourZoomIndicator"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <script>
@@ -3033,6 +3555,434 @@
           document.getElementById("maxDiff").textContent = "$0.00";
         }
       })();
+
+      // ==========================================
+      // INTERACTIVE TOUR SYSTEM FOR RECRUITERS
+      // ==========================================
+      
+      let currentTourStep = 0;
+      let tourActive = false;
+      let tourMap = null;
+      let tourMarkers = [];
+
+      const tourSteps = [
+        {
+          id: 'location-screen',
+          title: '📍 Smart Location Entry',
+          description: 'Users start by entering their <strong>Toronto location</strong>. The app features <span class="highlight">intelligent autocomplete</span> with real Toronto neighborhoods, landmarks, and postal codes. This ensures accurate store proximity calculations.',
+          element: '.location-container',
+          position: 'right',
+          label: 'Entry Point',
+          action: null
+        },
+        {
+          id: 'auth-system',
+          title: '🔐 User Authentication',
+          description: 'PricePatrol includes a <strong>complete authentication system</strong> with login/signup. User preferences like <span class="highlight">favorite items</span> and <span class="highlight">search history</span> are saved for a personalized experience.',
+          element: '.location-login-btn',
+          position: 'bottom-left',
+          label: 'Auth System',
+          action: null
+        },
+        {
+          id: 'quick-start',
+          title: '⚡ Quick Start Options',
+          description: 'Popular locations are available as <strong>one-click shortcuts</strong>. Users can instantly start tracking prices at <span class="highlight">Pioneer Village</span>, <span class="highlight">Downtown Toronto</span>, or <span class="highlight">North York</span>.',
+          element: '.location-examples',
+          position: 'top',
+          label: 'UX Feature',
+          action: null
+        },
+        {
+          id: 'map-transition',
+          title: '🗺️ Interactive Map View',
+          description: 'Let me show you the main app interface with the <strong>live interactive map</strong>. This is where the magic happens!',
+          element: '.location-btn',
+          position: 'top',
+          label: 'Transition',
+          action: 'startMapDemo'
+        },
+        {
+          id: 'control-panel',
+          title: '🎛️ Smart Control Panel',
+          description: 'The <strong>draggable control panel</strong> lets users select grocery items, choose number of stores to display, and view real-time statistics. It\'s <span class="highlight">resizable and moveable</span> for optimal viewing.',
+          element: '#controlPanel',
+          position: 'right',
+          label: 'Controls',
+          action: null
+        },
+        {
+          id: 'item-selection',
+          title: '🛒 Product Selection',
+          description: 'Users can track prices for <strong>12+ grocery items</strong> including milk, eggs, bread, chicken, and more. The <span class="highlight">multi-select feature</span> allows comparing total shopping cart prices across stores.',
+          element: '#itemSelect',
+          position: 'right',
+          label: 'Products',
+          action: null
+        },
+        {
+          id: 'multi-select',
+          title: '📋 Multi-Item Comparison',
+          description: 'The <strong>shopping list feature</strong> lets users check multiple items to see <span class="highlight">combined prices</span>. Perfect for weekly grocery planning and finding the cheapest store for your entire list!',
+          element: '.multi-check',
+          position: 'right',
+          label: 'Advanced',
+          parentElement: '#controlPanel',
+          action: null
+        },
+        {
+          id: 'find-locations',
+          title: '🔍 Location Discovery',
+          description: 'Click to <strong>find nearby stores</strong>! The app will display grocery stores on the map with <span class="highlight">color-coded price markers</span>.',
+          element: '#findBtn',
+          position: 'right',
+          label: 'Action',
+          action: 'triggerFind'
+        },
+        {
+          id: 'map-markers',
+          title: '📍 Price Markers',
+          description: 'Each marker shows the <strong>actual price</strong> at that store. <span class="highlight">Green = cheap</span>, <span class="highlight">Orange = average</span>, <span class="highlight">Red = expensive</span>. Gold badges show the <strong>top 3 best deals</strong>!',
+          element: '#map',
+          position: 'center',
+          label: 'Visualization',
+          action: null
+        },
+        {
+          id: 'results-panel',
+          title: '🏆 Best Deals Panel',
+          description: 'The results panel instantly shows the <strong>cheapest and most expensive</strong> options. Users can see exactly <span class="highlight">how much they\'ll save</span> by choosing the best deal. One-click navigation to any store!',
+          element: '#resultsPanel',
+          position: 'left',
+          label: 'Results',
+          action: null
+        },
+        {
+          id: 'legend',
+          title: '🎨 Price Legend',
+          description: 'The color legend helps users quickly understand the <strong>price classification system</strong>. Rankings 1-3 are highlighted with <span class="highlight">gold, silver, and bronze</span> badges.',
+          element: '.legend',
+          position: 'left',
+          label: 'Guide',
+          action: null
+        },
+        {
+          id: 'live-stats',
+          title: '📊 Real-Time Statistics',
+          description: 'Live statistics show <strong>stores tracked</strong>, <strong>average price</strong>, and <strong>maximum savings potential</strong>. The <span class="highlight">live indicator</span> shows the app is actively monitoring prices.',
+          element: '.stats',
+          position: 'right',
+          label: 'Analytics',
+          action: null
+        },
+        {
+          id: 'share-feature',
+          title: '📤 Social Sharing',
+          description: 'Users can <strong>share their savings</strong> with friends! The share button generates a summary of deals found, perfect for <span class="highlight">social media</span> or <span class="highlight">messaging apps</span>.',
+          element: '#shareBtn',
+          position: 'right',
+          label: 'Social',
+          action: null
+        },
+        {
+          id: 'conclusion',
+          title: '🎉 That\'s PricePatrol!',
+          description: 'A <strong>full-stack web application</strong> built with vanilla JavaScript, Leaflet.js for mapping, and local storage for user data. Features include: <span class="highlight">real-time price tracking</span>, <span class="highlight">smart authentication</span>, <span class="highlight">interactive maps</span>, and <span class="highlight">social sharing</span>. Ready to explore?',
+          element: null,
+          position: 'center',
+          label: 'Summary',
+          action: null
+        }
+      ];
+
+      function startTour() {
+        document.getElementById('tourWelcome').classList.add('active');
+        document.getElementById('liveDemoBtn').style.display = 'none';
+      }
+
+      function skipAuthAndStartTour() {
+        // Hide auth screen and show location screen first
+        document.getElementById('authScreen').classList.add('hidden');
+        document.getElementById('locationScreen').classList.remove('hidden');
+        
+        // Then start the tour
+        document.getElementById('tourWelcome').classList.add('active');
+        document.getElementById('liveDemoBtn').style.display = 'none';
+      }
+
+      function beginTourSteps() {
+        document.getElementById('tourWelcome').classList.remove('active');
+        tourActive = true;
+        currentTourStep = 0;
+        showTourStep(currentTourStep);
+      }
+
+      function endTour() {
+        tourActive = false;
+        document.getElementById('tourWelcome').classList.remove('active');
+        document.getElementById('tourOverlay').classList.remove('active');
+        document.getElementById('tourSpotlight').style.display = 'none';
+        document.getElementById('tourTooltip').style.display = 'none';
+        document.getElementById('tourZoomIndicator').classList.remove('active');
+        document.getElementById('liveDemoBtn').style.display = 'flex';
+        
+        // Reset to location screen
+        goBackFromTour();
+      }
+
+      function goBackFromTour() {
+        const locationScreen = document.getElementById('locationScreen');
+        const backButton = document.getElementById('backButton');
+        const controlPanel = document.getElementById('controlPanel');
+        const resultsPanel = document.getElementById('resultsPanel');
+        
+        locationScreen.classList.remove('hidden');
+        backButton.classList.remove('show');
+        if (controlPanel) controlPanel.style.display = 'none';
+        if (resultsPanel) resultsPanel.style.display = 'none';
+        
+        // Clean up any tour markers
+        tourMarkers.forEach(m => {
+          if (tourMap) tourMap.removeLayer(m);
+        });
+        tourMarkers = [];
+        
+        if (tourMap) {
+          tourMap.remove();
+          tourMap = null;
+        }
+      }
+
+      function showTourStep(stepIndex) {
+        const step = tourSteps[stepIndex];
+        if (!step) return;
+
+        // Execute any action first
+        if (step.action) {
+          executeTourAction(step.action);
+        }
+
+        // Small delay to allow actions to complete
+        setTimeout(() => {
+          updateTourUI(step, stepIndex);
+        }, step.action ? 800 : 100);
+      }
+
+      function executeTourAction(action) {
+        const zoomIndicator = document.getElementById('tourZoomIndicator');
+        
+        switch(action) {
+          case 'startMapDemo':
+            // Simulate entering the map view
+            zoomIndicator.classList.add('active');
+            setTimeout(() => {
+              zoomIndicator.classList.remove('active');
+              startMapForTour();
+            }, 500);
+            break;
+            
+          case 'triggerFind':
+            // Simulate clicking find button
+            const locationCount = document.getElementById('locationCount');
+            if (locationCount) locationCount.value = '10';
+            
+            setTimeout(() => {
+              const findBtn = document.getElementById('findBtn');
+              if (findBtn) findBtn.click();
+            }, 300);
+            break;
+        }
+      }
+
+      function startMapForTour() {
+        const locationScreen = document.getElementById('locationScreen');
+        const controlPanel = document.getElementById('controlPanel');
+        const backButton = document.getElementById('backButton');
+        
+        locationScreen.classList.add('hidden');
+        
+        setTimeout(() => {
+          controlPanel.style.display = 'block';
+          backButton.classList.add('show');
+          
+          // Initialize map if needed
+          if (!window.torontoMap && !tourMap) {
+            initTourMap();
+          }
+        }, 500);
+      }
+
+      function initTourMap() {
+        const mapElement = document.getElementById('map');
+        if (!mapElement) return;
+        
+        tourMap = L.map('map', {
+          zoomAnimation: true,
+          fadeAnimation: true
+        }).setView([43.7666, -79.5023], 14);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap'
+        }).addTo(tourMap);
+
+        // Add user location marker
+        L.marker([43.7666, -79.5023], {
+          icon: L.divIcon({
+            className: 'user-location-marker',
+            html: '<div style="font-size: 32px;">📍</div>',
+            iconSize: [32, 32]
+          })
+        }).addTo(tourMap).bindPopup('Your Location').openPopup();
+        
+        window.torontoMap = tourMap;
+      }
+
+      function updateTourUI(step, stepIndex) {
+        const overlay = document.getElementById('tourOverlay');
+        const spotlight = document.getElementById('tourSpotlight');
+        const tooltip = document.getElementById('tourTooltip');
+        const progress = document.getElementById('tourProgress');
+        
+        // Update progress dots
+        progress.innerHTML = tourSteps.map((_, i) => 
+          `<div class="tour-progress-dot ${i < stepIndex ? 'completed' : ''} ${i === stepIndex ? 'active' : ''}"></div>`
+        ).join('');
+        
+        // Update tooltip content
+        document.getElementById('tourStepNumber').textContent = stepIndex + 1;
+        document.getElementById('tourStepLabel').textContent = step.label;
+        document.getElementById('tourTitle').textContent = step.title;
+        document.getElementById('tourDescription').innerHTML = step.description;
+        
+        // Update buttons
+        document.getElementById('tourPrevBtn').style.display = stepIndex === 0 ? 'none' : 'block';
+        document.getElementById('tourNextBtn').textContent = stepIndex === tourSteps.length - 1 ? 'Finish Tour ✓' : 'Next →';
+        
+        // Position spotlight and tooltip
+        if (step.element) {
+          const element = document.querySelector(step.element);
+          if (element) {
+            const rect = element.getBoundingClientRect();
+            const padding = 15;
+            
+            // Show and position spotlight
+            spotlight.style.display = 'block';
+            spotlight.style.left = (rect.left - padding) + 'px';
+            spotlight.style.top = (rect.top - padding) + 'px';
+            spotlight.style.width = (rect.width + padding * 2) + 'px';
+            spotlight.style.height = (rect.height + padding * 2) + 'px';
+            
+            // Position tooltip based on position preference
+            positionTooltip(tooltip, rect, step.position);
+            
+            overlay.classList.add('active');
+          } else {
+            // Element not found, show centered
+            showCenteredTooltip(tooltip, overlay, spotlight);
+          }
+        } else {
+          // No element, show centered
+          showCenteredTooltip(tooltip, overlay, spotlight);
+        }
+        
+        tooltip.style.display = 'block';
+      }
+
+      function positionTooltip(tooltip, elementRect, position) {
+        const tooltipWidth = 400;
+        const tooltipHeight = 300;
+        const margin = 30;
+        
+        // Remove all arrow classes
+        tooltip.classList.remove('arrow-left', 'arrow-right', 'arrow-top', 'arrow-bottom');
+        
+        let left, top;
+        
+        switch(position) {
+          case 'right':
+            left = elementRect.right + margin;
+            top = elementRect.top + (elementRect.height / 2) - 100;
+            tooltip.classList.add('arrow-left');
+            break;
+          case 'left':
+            left = elementRect.left - tooltipWidth - margin;
+            top = elementRect.top + (elementRect.height / 2) - 100;
+            tooltip.classList.add('arrow-right');
+            break;
+          case 'top':
+            left = elementRect.left + (elementRect.width / 2) - (tooltipWidth / 2);
+            top = elementRect.top - tooltipHeight - margin;
+            tooltip.classList.add('arrow-bottom');
+            break;
+          case 'bottom':
+          case 'bottom-left':
+            left = elementRect.left;
+            top = elementRect.bottom + margin;
+            tooltip.classList.add('arrow-top');
+            break;
+          case 'center':
+          default:
+            left = window.innerWidth / 2 - tooltipWidth / 2;
+            top = window.innerHeight / 2 - 150;
+            break;
+        }
+        
+        // Keep tooltip on screen
+        left = Math.max(20, Math.min(left, window.innerWidth - tooltipWidth - 20));
+        top = Math.max(20, Math.min(top, window.innerHeight - tooltipHeight - 20));
+        
+        tooltip.style.left = left + 'px';
+        tooltip.style.top = top + 'px';
+      }
+
+      function showCenteredTooltip(tooltip, overlay, spotlight) {
+        const tooltipWidth = 400;
+        
+        tooltip.classList.remove('arrow-left', 'arrow-right', 'arrow-top', 'arrow-bottom');
+        tooltip.style.left = (window.innerWidth / 2 - tooltipWidth / 2) + 'px';
+        tooltip.style.top = (window.innerHeight / 2 - 150) + 'px';
+        
+        spotlight.style.display = 'none';
+        overlay.classList.add('active');
+      }
+
+      function nextTourStep() {
+        if (currentTourStep < tourSteps.length - 1) {
+          currentTourStep++;
+          showTourStep(currentTourStep);
+        } else {
+          endTour();
+        }
+      }
+
+      function prevTourStep() {
+        if (currentTourStep > 0) {
+          currentTourStep--;
+          
+          // If going back past the map transition, return to location screen
+          if (currentTourStep < 4) {
+            goBackFromTour();
+            setTimeout(() => {
+              document.getElementById('locationScreen').classList.remove('hidden');
+            }, 100);
+          }
+          
+          showTourStep(currentTourStep);
+        }
+      }
+
+      // Keyboard navigation for tour
+      document.addEventListener('keydown', (e) => {
+        if (!tourActive) return;
+        
+        if (e.key === 'ArrowRight' || e.key === 'Enter') {
+          nextTourStep();
+        } else if (e.key === 'ArrowLeft') {
+          prevTourStep();
+        } else if (e.key === 'Escape') {
+          endTour();
+        }
+      });
     </script>
   </body>
 </html>
