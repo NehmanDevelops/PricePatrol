@@ -1,12 +1,14 @@
-Team 6 
-Members: Sean,  Agasti Kulkarni, Nehman Rahimi  , Chirayu Singhania
-Local grocery price comparison
+# PricePatrol 🕵️💰
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-222222?style=flat-square&logo=github)](https://nehmandevelops.github.io/PricePatrol/)
+![HTML](https://img.shields.io/badge/HTML-CSS-E34F26?style=flat-square&logo=html5)
+![JavaScript](https://img.shields.io/badge/JavaScript-Vanilla-F7DF1E?style=flat-square&logo=javascript)
+![Leaflet](https://img.shields.io/badge/Leaflet-Maps-199900?style=flat-square&logo=leaflet)
 
+**Team 6** — Sean, Agasti Kulkarni, Nehman Rahimi, Chirayu Singhania
 
-
-Solution 
-The program, PricePatrol, outputs a map based on an entered address in Toronto, which shows local grocery stores and their prices for an item. 
+## 🎯 Solution
+ 
 
 The map calculates an average price of these groceries and highlights which stores sell at a below average, average, and above average price.
 
